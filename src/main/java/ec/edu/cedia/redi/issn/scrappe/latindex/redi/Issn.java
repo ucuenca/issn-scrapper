@@ -13,22 +13,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ec.edu.cedia.redi.issn.scrapper.search;
-
-import ec.edu.cedia.redi.issn.scrapper.api.IssnScrape;
-import ec.edu.cedia.redi.issn.scrapper.api.Scrapper;
+package ec.edu.cedia.redi.issn.scrappe.latindex.redi;
 
 /**
  *
  * @author Xavier Sumba <xavier.sumba93@ucuenca.ec>
  */
-public class Main {
+public class Issn {
 
-    public static void main(String[] args) {
-        String title = "Detecting similar areas of knowledge using semantic and data mining technologies";
-        IssnScrape is = new Scrapper(new GoogleSearch());
-        for (String string : is.scrape(title)) {
-            System.out.println(string);
-        }
+    private String uri;
+    private String issn;
+
+    public String getUri() {
+        return uri;
     }
+
+    public void setUri(String uri) {
+        this.uri = uri;
+    }
+
+    public String getIssn() {
+        return issn;
+    }
+
+    public void setIssn(String issn) {
+        this.issn = issn;
+    }
+
+    @Override
+    public String toString() {
+        return uri + ";" + issn;
+    }
+
 }
