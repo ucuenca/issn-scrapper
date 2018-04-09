@@ -18,6 +18,7 @@ package ec.edu.cedia.redi.issn.scrapper.search;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -41,15 +42,22 @@ public class GoogleSearch implements WebSearcher {
             String urlSearch = String.format(SEARCH_FORMAT, URLEncoder.encode(query, "utf-8"));
             Document doc = Jsoup.connect(urlSearch)
                     .userAgent(USER_AGENT).get();
+            if (doc.select("#topstuff .med").size() > 1) {
+                // Find a box with at the top of results. This means that the 
+                // search return a suggestion, or there ain't results.
+                // In this case, we ignore suggestions and just imply 
+                // that the search return 0 results.
+                return Collections.emptyList();
+            }
             Elements elements = doc.select(".g .rc .r a");
-            for (int i = 0; i < n; i++) {
+            for (int i = 0; i < Math.min(n, elements.size()); i++) {
                 String url = elements.get(i).attr("href");
                 urls.add(url);
             }
         } catch (IOException ex) {
-            log.error("Cannot consume query " + query, ex);
+            throw new RuntimeException(ex);
         }
-        log.info("Found {}/{} urls for query {}", urls.size(), n, query);
+        log.info("Found {}/{} results for query {}", urls.size(), n, query);
         return urls;
     }
 

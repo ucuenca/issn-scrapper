@@ -15,29 +15,29 @@
  */
 package ec.edu.cedia.redi.issn.scrapper.api;
 
-import ec.edu.cedia.redi.issn.scrapper.search.WebSearcher;
 import java.util.List;
 
 /**
+ * Find potential ISSN numbers in a web search.
  *
  * @author Xavier Sumba <xavier.sumba93@ucuenca.ec>
  */
-public class Scrapper implements IssnScrape {
+public interface IssnScrapper {
 
-    PublicationIssnCollector collector;
+    /**
+     * Given a title and a abstract find potential ISSN numbers in a web search.
+     *
+     * @param title
+     * @param abztract
+     * @return
+     */
+    public List<String> scrape(String title, String abztract);
 
-    public Scrapper(WebSearcher web) {
-        collector = new PublicationIssnCollector(web);
-    }
-
-    @Override
-    public List<String> scrape(String title, String abztract) {
-        return collector.collect(title, abztract);
-    }
-
-    @Override
-    public List<String> scrape(String title) {
-        return collector.collect(title);
-    }
-
+    /**
+     * Given a title, find potential ISSN numbers in a web search.
+     *
+     * @param title
+     * @return
+     */
+    public List<String> scrape(String title);
 }

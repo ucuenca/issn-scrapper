@@ -16,7 +16,8 @@
 package ec.edu.cedia.redi.issn.scrapper.api;
 
 import ec.edu.cedia.redi.issn.scrapper.search.GoogleSearch;
-import org.junit.Assert;
+import static org.junit.Assert.assertEquals;
+import org.junit.Before;
 import org.junit.Test;
 
 /**
@@ -25,24 +26,47 @@ import org.junit.Test;
  */
 public class ScrapperTest {
 
-    /**
-     * Test of scrape method, of class Scrapper.
-     */
-    @Test
-    public void testScrape_String_String() {
-        String title = "Detecting similar areas of knowledge using semantic and data mining technologies";
-        IssnScrape scrapper = new Scrapper(new GoogleSearch());
-        Assert.assertEquals(scrapper.scrape(title, "").size(), 9);
+    IssnScrapper scrapper;
+
+    @Before
+    public void init() {
+        scrapper = new PublicationIssnScrapper(new GoogleSearch());
+
     }
 
     /**
-     * Test of scrape method, of class Scrapper.
+     * Test of scrape method with only title.
+     */
+    @Test
+    public void testScrapeTitleResults() {
+        String title = "Detecting similar areas of knowledge using semantic and data mining technologies";
+        assertEquals("Size does not match", scrapper.scrape(title).size(), 9);
+    }
+
+    /**
+     * Test of scrape method with only title when there are not results..
+     */
+    @Test
+    public void testScrapeTitleNoResults() {
+        String title = "Plataforma para la b�squeda por contenido visual y sem�ntico de im�genes m�dicas";
+        assertEquals("Size does not match", scrapper.scrape(title).size(), 0);
+    }
+
+    /**
+     * Test of scrape method with abstract and title.
      */
     @Test
     public void testScrape_String() {
         String title = "Detecting similar areas of knowledge using semantic and data mining technologies";
-        IssnScrape scrapper = new Scrapper(new GoogleSearch());
-        Assert.assertEquals(scrapper.scrape(title).size(), 9);
+        String abztract = "Searching for scientific publications online is an essential task for researchers \n"
+                + "working on a certain topic. However, the extremely large amount of scientific publications \n"
+                + "found in the web turns the process of finding a publication into a very difficult task whereas, \n"
+                + "locating peers interested in collaborating on a specific topic or reviewing literature is even \n"
+                + "more challenging. In this paper, we propose a novel architecture to join multiple \n"
+                + "bibliographic sources, with the aim of identifying common research areas and potential \n"
+                + "collaboration networks, through a combination of ontologies, vocabularies, and Linked Data \n"
+                + "technologies for enriching a base data model. ";
+        assertEquals("Size does not match", scrapper.scrape(title, abztract).size(), 2);
     }
 
 }

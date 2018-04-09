@@ -15,15 +15,13 @@
  */
 package ec.edu.cedia.redi.issn.scrappe.latindex;
 
-import ec.edu.cedia.redi.issn.scrappe.latindex.redi.Issn;
 import ec.edu.cedia.redi.issn.scrappe.latindex.redi.Publication;
 import ec.edu.cedia.redi.issn.scrappe.latindex.redi.Redi;
 import ec.edu.cedia.redi.issn.scrappe.latindex.redi.RediRepository;
-import ec.edu.cedia.redi.issn.scrapper.api.IssnScrape;
-import ec.edu.cedia.redi.issn.scrapper.api.Scrapper;
 import ec.edu.cedia.redi.issn.scrapper.search.GoogleSearch;
-import java.util.ArrayList;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *
@@ -31,40 +29,23 @@ import java.util.List;
  */
 public class Main {
 
-    public static void main(String[] args) throws Exception {
-        IssnScrape is = new Scrapper(new GoogleSearch());
+    private static final Logger log = LoggerFactory.getLogger(Main.class);
 
+    public static void main(String[] args) throws Exception {
         try (RediRepository r = RediRepository.getInstance()) {
             Redi redi = new Redi(r);
-            List<Issn> issn = redi.getIssns();
+            FindPotentialIssn finder = new FindPotentialIssn(redi, new GoogleSearch());
             List<Publication> publications = redi.getPublications();
-            for (Publication publication : publications) {
-                for (String i : is.scrape(publication.getTitle())) {
-                    List<Issn> trueIssn = selectIssn(issn, i);
-                    publication.setIssn(trueIssn);
+            for (Publication p : publications) {
+                if (!redi.hasPubPotentialIssn(p)) {
+                    finder.findPotentialIssn(p);
+                    redi.storePublication(p);
                 }
             }
-            
-            
+
             for (Publication publication : publications) {
                 System.out.println(publication);
             }
         }
-    }
-
-    public static List<Issn> selectIssn(List<Issn> issn, String compareIssn) {
-        compareIssn = cleanIssn(compareIssn);
-        List<Issn> selected = new ArrayList<>();
-        for (Issn issn1 : issn) {
-            String latindexIssn = cleanIssn(issn1.getIssn());
-            if (latindexIssn.equals(compareIssn)) {
-                selected.add(issn1);
-            }
-        }
-        return selected;
-    }
-
-    public static String cleanIssn(String issn) {
-        return issn.toLowerCase().replace("-", "");
     }
 }

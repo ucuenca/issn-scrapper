@@ -24,7 +24,10 @@ import java.util.List;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import javax.net.ssl.SSLHandshakeException;
+import org.jsoup.HttpStatusException;
 import org.jsoup.Jsoup;
+import org.jsoup.UnsupportedMimeTypeException;
 import org.jsoup.nodes.Document;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,9 +36,9 @@ import org.slf4j.LoggerFactory;
  *
  * @author Xavier Sumba <xavier.sumba93@ucuenca.ec>
  */
-public class PublicationIssnCollector {
+public class PublicationIssnScrapper implements IssnScrapper {
 
-    private static final Logger log = LoggerFactory.getLogger(PublicationIssnCollector.class);
+    private static final Logger log = LoggerFactory.getLogger(PublicationIssnScrapper.class);
     /**
      * When there's a PDF file, get the HTML from Google Cache.
      */
@@ -48,11 +51,12 @@ public class PublicationIssnCollector {
     private static final Pattern PATTERN = Pattern.compile("[0-9]{4}\\-?[0-9]{3}[0-9xX]");
     private WebSearcher searcher;
 
-    public PublicationIssnCollector(WebSearcher searcher) {
-        this.searcher = searcher;
+    public PublicationIssnScrapper(WebSearcher web) {
+        searcher = web;
     }
 
-    public List<String> collect(String title, String abztract) {
+    @Override
+    public List<String> scrape(String title, String abztract) {
         Set<String> issn = new HashSet<>();
         String query;
         if (abztract != null && !"".equals(abztract)) {
@@ -69,8 +73,9 @@ public class PublicationIssnCollector {
         return new ArrayList<>(issn);
     }
 
-    public List<String> collect(String title) {
-        return collect(title, null);
+    @Override
+    public List<String> scrape(String title) {
+        return scrape(title, null);
     }
 
     private List<String> findIssn(String url) {
@@ -83,18 +88,27 @@ public class PublicationIssnCollector {
                         .get();
             } else {
                 doc = Jsoup.connect(url)
+                        .timeout(20000)
                         .userAgent(WebSearcher.USER_AGENT)
                         .get();
             }
-            Matcher matcher = PATTERN.matcher(doc.body().text());
+            Matcher matcher = PATTERN.matcher(doc.text());
 
             while (matcher.find()) {
-                issn.add(matcher.group());
+                String issnFound = matcher.group();
+                if (issnFound.length() == 8) {
+                    issnFound = issnFound.substring(0, 4) + "-" + issnFound.substring(4);
+                }
+                issn.add(issnFound);
             }
+        } catch (HttpStatusException | SSLHandshakeException ex) {
+            log.warn("Cannot make request, probably google cache does have the url {}", url);
+        } catch (UnsupportedMimeTypeException ex) {
+            log.warn("Don't understand MIME Type for url {}", url);
         } catch (IOException ex) {
-            log.error("Cannot GET request for url" + url, ex);
+            throw new RuntimeException(ex);
         }
+
         return issn;
     }
-
 }
