@@ -17,6 +17,8 @@ package ec.edu.cedia.redi.issn.scrapper.api;
 
 import ec.edu.cedia.redi.issn.scrapper.search.WebSearcher;
 import java.io.IOException;
+import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -105,6 +107,8 @@ public class PublicationIssnScrapper implements IssnScrapper {
             log.warn("Cannot make request, probably google cache does have the url {}", url);
         } catch (UnsupportedMimeTypeException ex) {
             log.warn("Don't understand MIME Type for url {}", url);
+        } catch (SocketTimeoutException | SocketException ex) {
+            log.warn("{} for {}", ex.getMessage(), url);
         } catch (IOException ex) {
             throw new RuntimeException(ex);
         }

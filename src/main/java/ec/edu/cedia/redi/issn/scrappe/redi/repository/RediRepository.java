@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ec.edu.cedia.redi.issn.scrappe.latindex.redi;
+package ec.edu.cedia.redi.issn.scrappe.redi.repository;
 
 import java.util.HashMap;
 import java.util.Map;

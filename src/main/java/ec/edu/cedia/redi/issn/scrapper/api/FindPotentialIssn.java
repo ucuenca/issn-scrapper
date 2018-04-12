@@ -13,13 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ec.edu.cedia.redi.issn.scrappe.latindex;
+package ec.edu.cedia.redi.issn.scrapper.api;
 
-import ec.edu.cedia.redi.issn.scrappe.latindex.redi.Issn;
-import ec.edu.cedia.redi.issn.scrappe.latindex.redi.Publication;
-import ec.edu.cedia.redi.issn.scrappe.latindex.redi.Redi;
-import ec.edu.cedia.redi.issn.scrapper.api.IssnScrapper;
-import ec.edu.cedia.redi.issn.scrapper.api.PublicationIssnScrapper;
+import ec.edu.cedia.redi.issn.scrappe.redi.repository.Redi;
+import ec.edu.cedia.redi.issn.scrappe.redi.repository.RediRepository;
+import ec.edu.cedia.redi.issn.scrapper.model.Issn;
+import ec.edu.cedia.redi.issn.scrapper.model.Publication;
+import ec.edu.cedia.redi.issn.scrapper.search.GoogleSearch;
 import ec.edu.cedia.redi.issn.scrapper.search.WebSearcher;
 import java.util.ArrayList;
 import java.util.List;
@@ -34,8 +34,8 @@ import org.slf4j.LoggerFactory;
 public class FindPotentialIssn {
 
     private static final Logger log = LoggerFactory.getLogger(FindPotentialIssn.class);
-    private IssnScrapper scrapper;
-    private Redi redi;
+    private final IssnScrapper scrapper;
+    private final Redi redi;
 
     public FindPotentialIssn(Redi redi, WebSearcher searcher) {
         this.redi = redi;
@@ -65,6 +65,24 @@ public class FindPotentialIssn {
         }
         log.info("Found {}/{} ISSN for publication {}", trueIssn.size(), issnCandidates.size(), p.getUri());
         p.setIssn(trueIssn);
+    }
+
+    public static void main(String[] args) throws Exception {
+        try (RediRepository r = RediRepository.getInstance()) {
+            Redi redi = new Redi(r);
+            FindPotentialIssn finder = new FindPotentialIssn(redi, new GoogleSearch());
+            List<Publication> publications = redi.getPublications();
+            for (Publication p : publications) {
+                if (!redi.hasPubPotentialIssn(p)) {
+                    finder.findPotentialIssn(p);
+                    redi.storePublication(p);
+                }
+            }
+
+            for (Publication publication : publications) {
+                System.out.println(publication);
+            }
+        }
     }
 
 }

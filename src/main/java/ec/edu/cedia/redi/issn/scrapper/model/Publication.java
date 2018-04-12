@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ec.edu.cedia.redi.issn.scrappe.latindex.redi;
+package ec.edu.cedia.redi.issn.scrapper.model;
 
 import java.util.List;
 
@@ -62,9 +62,11 @@ public class Publication {
 
     @Override
     public String toString() {
-        String readable = "uri,";
-        for (Issn issn1 : issn) {
-            readable += issn1.getUri() + ",";
+        String readable = uri + ",";
+        if (issn != null && !issn.isEmpty()) {
+            for (Issn issn1 : issn) {
+                readable += issn1.getUri() + ",";
+            }
         }
         return readable;
     }
