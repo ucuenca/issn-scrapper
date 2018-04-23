@@ -23,6 +23,7 @@ import org.openrdf.model.Statement;
 import org.openrdf.model.URI;
 import org.openrdf.model.ValueFactory;
 import org.openrdf.model.impl.ValueFactoryImpl;
+import org.openrdf.model.vocabulary.OWL;
 import org.openrdf.query.BindingSet;
 import org.openrdf.query.MalformedQueryException;
 import org.openrdf.query.QueryEvaluationException;
@@ -48,6 +49,9 @@ public class Redi {
     private static final String PUB_SCIELO_CONTEXT = "https://redi.cedia.edu.ec/context/provider/ScieloProvider";
     private static final String LATINDEX_CONTEXT = "https://redi.cedia.edu.ec/context/latindex";
     private static final String POTENTIAL_ISSN_CONTEXT = "https://redi.cedia.edu.ec/context/latindexPotentialIssn";
+    private static final String AUGMENT_ISSN_INFO_CONTEXT = "https://redi.cedia.edu.ec/context/latindexAugmentInfo";
+    private static final String ROAD_ISSN_CONTEXT = "https://redi.cedia.edu.ec/context/roadissn";
+
     private static final String UC_PREFIX = "http://www.ucuenca.edu.ec/ontology/";
 
     public Redi(RediRepository conn) {
@@ -139,7 +143,7 @@ public class Redi {
             RepositoryConnection connection = conn.getConnection();
             String query = "PREFIX uc: <http://www.ucuenca.edu.ec/ontology/>"
                     + "SELECT DISTINCT * WHERE { GRAPH ?latindex {"
-                    + "   ?s uc:issn ?o. }} LIMIT 100";
+                    + "   ?s uc:issn ?o. }}";
 
             TupleQuery q = connection.prepareTupleQuery(QueryLanguage.SPARQL, query);
             q.setBinding("latindex", vf.createURI(LATINDEX_CONTEXT));
@@ -196,11 +200,108 @@ public class Redi {
         return null;
     }
 
+    public Issn getRoadIssn(String issn) throws RepositoryException {
+        RepositoryConnection connection = conn.getConnection();
+        try {
+            String findRoot = "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>\n"
+                    + "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n"
+                    + "PREFIX frbroo: <http://issn.org/ns/fr/frbr/frbroo/>\n"
+                    + "PREFIX cidoc: <http://www.cidoc-crm.org/cidoc-crm/>\n"
+                    + "\n"
+                    + "SELECT ?root\n"
+                    + "WHERE {\n"
+                    + "  GRAPH ?road {\n"
+                    + "    ?root a frbroo:F18_Serial_Work.\n"
+                    + "    ?issn rdf:value \"%s\".\n"
+                    + "    {\n"
+                    + "      ?issn ^cidoc:P1_is_identified_by/^frbroo:R10i_is_member_of ?root.\n"
+                    + "    } UNION {\n"
+                    + "      ?issn ^cidoc:P1_is_identified_by ?root.\n"
+                    + "    }\n"
+                    + "  }   \n"
+                    + "}";
+            findRoot = String.format(findRoot, issn);
+
+            TupleQuery q = connection.prepareTupleQuery(QueryLanguage.SPARQL, findRoot);
+            q.setBinding("road", vf.createURI(ROAD_ISSN_CONTEXT));
+            log.info("Searching ({}) resource ISSN in repository.", issn);
+            TupleQueryResult result = q.evaluate();
+
+            Issn i = null;
+            if (result.hasNext()) {
+                i = new Issn();
+                BindingSet variables = result.next();
+                i.setUri(variables.getBinding("root").getValue().stringValue());
+            }
+
+            if (i == null) {
+                return null;
+            }
+
+            String findInfo = "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>\n"
+                    + "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n"
+                    + "PREFIX frbroo: <http://issn.org/ns/fr/frbr/frbroo/>\n"
+                    + "PREFIX cidoc: <http://www.cidoc-crm.org/cidoc-crm/>\n"
+                    + "\n"
+                    + "SELECT ?value\n"
+                    + "WHERE {\n"
+                    + "  GRAPH ?road {\n"
+                    + "  	?target a frbroo:F13_Identifier.\n"
+                    + "	{?issn frbroo:R10i_is_member_of/cidoc:P1_is_identified_by ?target.}\n"
+                    + "    UNION    \n"
+                    + "    {?issn cidoc:P1_is_identified_by ?target.}   \n"
+                    + "    ?target rdf:value ?value\n"
+                    + "  }   \n"
+                    + "}";
+            q = connection.prepareTupleQuery(QueryLanguage.SPARQL, findInfo);
+            q.setBinding("road", vf.createURI(ROAD_ISSN_CONTEXT));
+            q.setBinding("issn", vf.createURI(i.getUri()));
+
+            log.info("Searching values for resource ({}) in repository.", i.getUri());
+            result = q.evaluate();
+            while (result.hasNext()) {
+                BindingSet variables = result.next();
+                String alternativeIssn = variables.getBinding("value").getValue().stringValue();
+                if (!alternativeIssn.equalsIgnoreCase(issn)) {
+                    i.setIssn(alternativeIssn);
+                    return i;
+                }
+            }
+        } catch (MalformedQueryException | QueryEvaluationException ex) {
+            log.error("Cannot query latindex ISSNs", ex);
+        } finally {
+            connection.close();
+        }
+        return null;
+    }
+
     public boolean hasPubPotentialIssn(Publication p) throws RepositoryException {
         RepositoryConnection connection = conn.getConnection();
         return connection.hasStatement(vf.createURI(p.getUri()),
                 vf.createURI(UC_PREFIX + "hasIssn"), null, true, vf.createURI(POTENTIAL_ISSN_CONTEXT));
 
+    }
+
+    public void augmentIssn(Issn latIssn, Issn roadIssn) {
+        RepositoryConnection connection = null;
+        try {
+            connection = conn.getConnection();
+            connection.begin();
+
+            URI uriLatIndex = vf.createURI(latIssn.getUri());
+            Statement stm = vf.createStatement(uriLatIndex, vf.createURI(UC_PREFIX + "issn"), vf.createLiteral(roadIssn.getIssn()));
+            connection.add(stm, vf.createURI(AUGMENT_ISSN_INFO_CONTEXT));
+            stm = vf.createStatement(uriLatIndex, OWL.SAMEAS, vf.createURI(roadIssn.getUri()));
+            connection.add(stm, vf.createURI(AUGMENT_ISSN_INFO_CONTEXT));
+
+            connection.commit();
+        } catch (RepositoryException ex) {
+        } finally {
+            try {
+                connection.close();
+            } catch (RepositoryException ex) {
+            }
+        }
     }
 
 }
