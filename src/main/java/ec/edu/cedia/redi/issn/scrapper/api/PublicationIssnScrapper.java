@@ -23,7 +23,9 @@ import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.net.ssl.SSLHandshakeException;
@@ -58,8 +60,9 @@ public class PublicationIssnScrapper implements IssnScrapper {
     }
 
     @Override
-    public List<String> scrape(String title, String abztract) {
-        Set<String> issn = new HashSet<>();
+    public Map<String, List<String>> scrape(String title, String abztract) {
+        Map<String, List<String>> results = new ConcurrentHashMap<>();
+
         String query;
         if (abztract != null && !"".equals(abztract)) {
             query = String.format("\"%s\" \"%s\" \"%s\"", title, abztract, DEFAULT_ISSN_KW);
@@ -69,14 +72,16 @@ public class PublicationIssnScrapper implements IssnScrapper {
 
         List<String> resultsSearch = searcher.getUrls(query, MAX_PAGES);
         for (String url : resultsSearch) {
+            Set<String> issn = new HashSet<>();
             issn.addAll(findIssn(url));
+            results.put(url, new ArrayList<>(issn));
         }
 
-        return new ArrayList<>(issn);
+        return results;
     }
 
     @Override
-    public List<String> scrape(String title) {
+    public Map<String, List<String>> scrape(String title) {
         return scrape(title, null);
     }
 

@@ -16,6 +16,7 @@
 package ec.edu.cedia.redi.issn.scrapper.api;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Find potential ISSN numbers in a web search.
@@ -31,7 +32,7 @@ public interface IssnScrapper {
      * @param abztract
      * @return
      */
-    public List<String> scrape(String title, String abztract);
+    public Map<String, List<String>> scrape(String title, String abztract);
 
     /**
      * Given a title, find potential ISSN numbers in a web search.
@@ -39,5 +40,5 @@ public interface IssnScrapper {
      * @param title
      * @return
      */
-    public List<String> scrape(String title);
+    public Map<String, List<String>> scrape(String title);
 }

@@ -19,6 +19,7 @@ import ec.edu.cedia.redi.issn.scrapper.model.Issn;
 import ec.edu.cedia.redi.issn.scrapper.model.Publication;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import org.openrdf.model.Statement;
 import org.openrdf.model.URI;
 import org.openrdf.model.ValueFactory;
@@ -107,7 +108,7 @@ public class Redi {
         }
     }
 
-    public void storePublication(Publication p) {
+    public void storePublicationAllPotentialIssn(Publication p) {
         RepositoryConnection connection = null;
         try {
             connection = conn.getConnection();
@@ -124,6 +125,19 @@ public class Redi {
                 URI issn = vf.createURI(i.getUri());
                 Statement stm = vf.createStatement(publication, vf.createURI(UC_PREFIX + "potentialIssn"), issn);
                 connection.add(stm, vf.createURI(POTENTIAL_ISSN_CONTEXT));
+            }
+
+            for (Map.Entry<String, List<Issn>> entry : p.getIssnPerPage().entrySet()) {
+                URI webpage = vf.createURI(entry.getKey());
+                for (Issn issn : entry.getValue()) {
+                    Statement pubWeb = vf.createStatement(publication, vf.createURI(UC_PREFIX, "hasWebResults"), webpage);
+                    Statement webIssn = vf.createStatement(webpage, vf.createURI(UC_PREFIX, "hasIssn"), vf.createURI(issn.getUri()));
+                    Statement issnWeb = vf.createStatement(vf.createURI(issn.getUri()), vf.createURI(UC_PREFIX, "belongsTo"), webpage);
+
+                    connection.add(pubWeb, vf.createURI(POTENTIAL_ISSN_CONTEXT));
+                    connection.add(webIssn, vf.createURI(POTENTIAL_ISSN_CONTEXT));
+                    connection.add(issnWeb, vf.createURI(POTENTIAL_ISSN_CONTEXT));
+                }
             }
             connection.commit();
         } catch (RepositoryException ex) {
@@ -169,16 +183,21 @@ public class Redi {
     public Issn getIssn(String issn) throws RepositoryException {
         RepositoryConnection connection = conn.getConnection();
         try {
-            String query = "SELECT DISTINCT * \n"
-                    + "WHERE { \n"
-                    + "  GRAPH ?latindex {  \n"
-                    + "    ?s <http://www.ucuenca.edu.ec/ontology/issn> ?o. \n"
+            String query = "PREFIX uc: <http://www.ucuenca.edu.ec/ontology/>\n"
+                    + "SELECT DISTINCT ?uri\n"
+                    + "WHERE {\n"
+                    + "  GRAPH ?latindex {\n"
+                    + "	     ?uri uc:issn ?o1.\n"
                     + "  }\n"
-                    + "  FILTER regex(str(?o), str(?issn), \"i\")\n"
+                    + "  GRAPH ?latindexAugment {\n"
+                    + "      ?uri uc:issn ?o2.\n"
+                    + "  }\n"
+                    + "  FILTER (regex(str(?o1), str(?issn), \"i\") || regex(str(?o2), str(?issn), \"i\")) \n"
                     + "} LIMIT 1";
 
             TupleQuery q = connection.prepareTupleQuery(QueryLanguage.SPARQL, query);
             q.setBinding("latindex", vf.createURI(LATINDEX_CONTEXT));
+            q.setBinding("latindexAugment", vf.createURI(AUGMENT_ISSN_INFO_CONTEXT));
             q.setBinding("issn", vf.createLiteral(issn));
             log.info("Searching ({}) ISSN in repository.", issn);
             TupleQueryResult result = q.evaluate();
@@ -186,8 +205,8 @@ public class Redi {
             if (result.hasNext()) {
                 Issn i = new Issn();
                 BindingSet variables = result.next();
-                i.setUri(variables.getBinding("s").getValue().stringValue());
-                i.setIssn(variables.getBinding("o").getValue().stringValue());
+                i.setUri(variables.getBinding("uri").getValue().stringValue());
+                i.setIssn(issn);
 
                 return i;
             }

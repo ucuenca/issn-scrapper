@@ -23,6 +23,8 @@ import ec.edu.cedia.redi.issn.scrapper.search.GoogleSearch;
 import ec.edu.cedia.redi.issn.scrapper.search.WebSearcher;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import org.openrdf.repository.RepositoryException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,21 +52,29 @@ public class FindPotentialIssn {
      * @throws RepositoryException
      */
     public void findPotentialIssn(Publication p) throws RepositoryException {
-        List<String> issnCandidates;
+        Map<String, List<String>> issnsPerPageResults;
+        Map<String, List<Issn>> issnsPerPageLatindex = new ConcurrentHashMap<>();
         if (p.getAbztract() == null) {
-            issnCandidates = scrapper.scrape(p.getTitle());
+            issnsPerPageResults = scrapper.scrape(p.getTitle());
         } else {
-            issnCandidates = scrapper.scrape(p.getTitle(), p.getAbztract());
+            issnsPerPageResults = scrapper.scrape(p.getTitle(), p.getAbztract());
         }
-        List<Issn> trueIssn = new ArrayList<>();
-        for (String issnCandidate : issnCandidates) {
-            Issn i = redi.getIssn(issnCandidate);
-            if (i != null) {
-                trueIssn.add(i);
+        List<Issn> allTrueIssn = new ArrayList<>();
+
+        for (Map.Entry<String, List<String>> entry : issnsPerPageResults.entrySet()) {
+            List<Issn> issnXPage = new ArrayList<>();
+            for (String issnCandidate : entry.getValue()) {
+                Issn i = redi.getIssn(issnCandidate);
+                if (i != null) {
+                    allTrueIssn.add(i);
+                    issnXPage.add(i);
+                }
             }
+            issnsPerPageLatindex.put(entry.getKey(), issnXPage);
         }
-        log.info("Found {}/{} ISSN for publication {}", trueIssn.size(), issnCandidates.size(), p.getUri());
-        p.setIssn(trueIssn);
+        log.info("Found {} ISSN for publication {}", allTrueIssn.size(), p.getUri());
+        p.setIssn(allTrueIssn);
+        p.setIssnPerPage(issnsPerPageLatindex);
     }
 
     public static void main(String[] args) throws Exception {
@@ -75,7 +85,7 @@ public class FindPotentialIssn {
             for (Publication p : publications) {
                 if (!redi.hasPubPotentialIssn(p)) {
                     finder.findPotentialIssn(p);
-                    redi.storePublication(p);
+                    redi.storePublicationAllPotentialIssn(p);
                 }
             }
 

@@ -16,6 +16,7 @@
 package ec.edu.cedia.redi.issn.scrapper.model;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  *
@@ -27,6 +28,7 @@ public class Publication {
     private String title;
     private String abztract;
     private List<Issn> issn;
+    private Map<String, List<Issn>> issnPerPageLatindex;
 
     public String getUri() {
         return uri;
@@ -69,6 +71,14 @@ public class Publication {
             }
         }
         return readable;
+    }
+
+    public void setIssnPerPage(Map<String, List<Issn>> snsPerPageLatindex) {
+        this.issnPerPageLatindex = snsPerPageLatindex;
+    }
+
+    public Map<String, List<Issn>> getIssnPerPage() {
+        return issnPerPageLatindex;
     }
 
 }
