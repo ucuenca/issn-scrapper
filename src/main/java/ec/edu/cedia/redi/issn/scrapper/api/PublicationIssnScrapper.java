@@ -29,6 +29,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.net.ssl.SSLHandshakeException;
+import javax.net.ssl.SSLProtocolException;
 import org.jsoup.HttpStatusException;
 import org.jsoup.Jsoup;
 import org.jsoup.UnsupportedMimeTypeException;
@@ -41,7 +42,7 @@ import org.slf4j.LoggerFactory;
  * @author Xavier Sumba <xavier.sumba93@ucuenca.ec>
  */
 public class PublicationIssnScrapper implements IssnScrapper {
-
+    
     private static final Logger log = LoggerFactory.getLogger(PublicationIssnScrapper.class);
     /**
      * When there's a PDF file, get the HTML from Google Cache.
@@ -54,41 +55,42 @@ public class PublicationIssnScrapper implements IssnScrapper {
     private static final String DEFAULT_ISSN_KW = "issn";
     private static final Pattern PATTERN = Pattern.compile("[0-9]{4}\\-?[0-9]{3}[0-9xX]");
     private WebSearcher searcher;
-
+    
     public PublicationIssnScrapper(WebSearcher web) {
         searcher = web;
     }
-
+    
     @Override
     public Map<String, List<String>> scrape(String title, String abztract) {
         Map<String, List<String>> results = new ConcurrentHashMap<>();
-
+        
         String query;
         if (abztract != null && !"".equals(abztract)) {
             query = String.format("\"%s\" \"%s\" \"%s\"", title, abztract, DEFAULT_ISSN_KW);
         } else {
             query = String.format("\"%s\" \"%s\"", title, DEFAULT_ISSN_KW);
         }
-
+        
         List<String> resultsSearch = searcher.getUrls(query, MAX_PAGES);
         for (String url : resultsSearch) {
             Set<String> issn = new HashSet<>();
             issn.addAll(findIssn(url));
             results.put(url, new ArrayList<>(issn));
         }
-
+        
         return results;
     }
-
+    
     @Override
     public Map<String, List<String>> scrape(String title) {
         return scrape(title, null);
     }
-
+    
     private List<String> findIssn(String url) {
         List<String> issn = new ArrayList<>();
         try {
             Document doc;
+            log.debug("Extracting URL: '{}'", url);
             if (url.endsWith("pdf")) {
                 doc = Jsoup.connect(String.format(GOOGLE_CACHE, URLEncoder.encode(url, "utf-8")))
                         .userAgent(WebSearcher.USER_AGENT)
@@ -100,7 +102,7 @@ public class PublicationIssnScrapper implements IssnScrapper {
                         .get();
             }
             Matcher matcher = PATTERN.matcher(doc.text());
-
+            
             while (matcher.find()) {
                 String issnFound = matcher.group();
                 if (issnFound.length() == 8) {
@@ -114,10 +116,12 @@ public class PublicationIssnScrapper implements IssnScrapper {
             log.warn("Don't understand MIME Type for url {}", url);
         } catch (SocketTimeoutException | SocketException ex) {
             log.warn("{} for {}", ex.getMessage(), url);
+        } catch (SSLProtocolException ex) {
+            log.warn("Cannot extract ISSNs for url ({}) due to SSL errors.", url);
         } catch (IOException ex) {
             throw new RuntimeException(ex);
         }
-
+        
         return issn;
     }
 }

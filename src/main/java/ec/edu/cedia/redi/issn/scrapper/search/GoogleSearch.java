@@ -57,7 +57,7 @@ public class GoogleSearch implements WebSearcher {
         } catch (IOException ex) {
             throw new RuntimeException(ex);
         }
-        log.info("Found {}/{} results for query {}", urls.size(), n, query);
+        log.debug("Found {}/{} results for query {}", urls.size(), n, query);
         return urls;
     }
 
