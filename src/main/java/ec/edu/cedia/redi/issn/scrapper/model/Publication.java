@@ -27,6 +27,9 @@ public class Publication {
     private String uri;
     private String title;
     private String abztract;
+    private String oissn;
+    private String ojournal;
+    
     private List<Issn> issn;
     private Map<String, List<Issn>> issnPerPageLatindex;
 
@@ -81,4 +84,19 @@ public class Publication {
         return issnPerPageLatindex;
     }
 
+    public String getOissn() {
+        return oissn;
+    }
+
+    public void setOissn(String oissn) {
+        this.oissn = oissn;
+    }
+
+    public String getOjournal() {
+        return ojournal;
+    }
+
+    public void setOjournal(String ojournal) {
+        this.ojournal = ojournal;
+    }
 }
