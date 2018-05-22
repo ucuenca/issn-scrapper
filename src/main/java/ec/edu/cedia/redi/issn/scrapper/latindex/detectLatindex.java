@@ -11,6 +11,9 @@ import ec.edu.cedia.redi.issn.scrapper.model.Journal;
 import ec.edu.cedia.redi.issn.scrapper.model.Publication;
 import ec.edu.cedia.redi.issn.scrapper.search.GoogleSearch;
 import ec.edu.cedia.redi.issn.scrapper.search.WebSearcher;
+import ec.edu.cedia.redi.issn.scrapper.search.query.Query;
+import ec.edu.cedia.redi.issn.scrapper.search.query.StrictQuery;
+import ec.edu.cedia.redi.issn.scrapper.search.query.Value;
 import ec.edu.cedia.redi.issn.scrapper.utils.BoundedExecutor;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -67,11 +70,11 @@ public class detectLatindex {
         String e4 = getFirstNStrings(jorunal, tot);
 
         String q = String.format("\"%s\" \"%s\" \"%s\" \"%s\"", e1, e2, e3, e4);
-
+        Query query = new StrictQuery(new Value(e1, 25), new Value(e2, 50), new Value(e3, -1), new Value(e4, 25));
         System.out.println(q);
         int randomNum = ThreadLocalRandom.current().nextInt(8, 15 + 1);
-        Thread.sleep(randomNum*1000);
-        List<String> urls = search.getUrls(q, 1);
+        Thread.sleep(randomNum * 1000);
+        List<String> urls = search.getUrls(query, 1);
         if (!urls.isEmpty()) {
             System.out.println("ok");
             return true;

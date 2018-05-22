@@ -15,6 +15,7 @@
  */
 package ec.edu.cedia.redi.issn.scrapper.search;
 
+import ec.edu.cedia.redi.issn.scrapper.search.query.Query;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.util.ArrayList;
@@ -36,10 +37,10 @@ public class GoogleSearch implements WebSearcher {
     private final Logger log = LoggerFactory.getLogger(GoogleSearch.class);
 
     @Override
-    public List<String> getUrls(String query, int n) {
+    public List<String> getUrls(Query query, int n) {
         List<String> urls = new ArrayList<>(n);
         try {
-            String urlSearch = String.format(SEARCH_FORMAT, URLEncoder.encode(query, "utf-8"));
+            String urlSearch = String.format(SEARCH_FORMAT, URLEncoder.encode(query.buildQueryWords(), "utf-8"));
             Document doc = Jsoup.connect(urlSearch)
                     .userAgent(USER_AGENT).get();
             if (doc.select("#topstuff .med").size() > 1) {

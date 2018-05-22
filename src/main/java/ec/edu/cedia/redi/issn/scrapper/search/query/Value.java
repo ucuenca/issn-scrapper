@@ -13,18 +13,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package ec.edu.cedia.redi.issn.scrapper.search;
-
-import ec.edu.cedia.redi.issn.scrapper.search.query.Query;
-import java.util.List;
+package ec.edu.cedia.redi.issn.scrapper.search.query;
 
 /**
  *
  * @author Xavier Sumba <xavier.sumba93@ucuenca.ec>
  */
-public interface WebSearcher {
+public class Value {
 
-    public static final String USER_AGENT = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/65.0.3325.181 Safari/537.36";
+    private String value;
+    private int frequency;
 
-    List<String> getUrls(Query query, int n);
+    public Value(String value, int frequency) {
+        this.value = value;
+        this.frequency = frequency;
+    }
+
+    public String getValue() {
+        return value;
+    }
+
+    public void setValue(String value) {
+        this.value = value;
+    }
+
+    public int getFrequency() {
+        return frequency;
+    }
+
+    public void setFrequency(int frequency) {
+        this.frequency = frequency;
+    }
+
 }

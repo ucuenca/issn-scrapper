@@ -16,6 +16,9 @@
 package ec.edu.cedia.redi.issn.scrapper.api;
 
 import ec.edu.cedia.redi.issn.scrapper.search.WebSearcher;
+import ec.edu.cedia.redi.issn.scrapper.search.query.Query;
+import ec.edu.cedia.redi.issn.scrapper.search.query.StrictQuery;
+import ec.edu.cedia.redi.issn.scrapper.search.query.Value;
 import java.io.IOException;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
@@ -42,7 +45,7 @@ import org.slf4j.LoggerFactory;
  * @author Xavier Sumba <xavier.sumba93@ucuenca.ec>
  */
 public class PublicationIssnScrapper implements IssnScrapper {
-    
+
     private static final Logger log = LoggerFactory.getLogger(PublicationIssnScrapper.class);
     /**
      * When there's a PDF file, get the HTML from Google Cache.
@@ -55,37 +58,37 @@ public class PublicationIssnScrapper implements IssnScrapper {
     private static final String DEFAULT_ISSN_KW = "issn";
     private static final Pattern PATTERN = Pattern.compile("[0-9]{4}\\-?[0-9]{3}[0-9xX]");
     private WebSearcher searcher;
-    
+
     public PublicationIssnScrapper(WebSearcher web) {
         searcher = web;
     }
-    
+
     @Override
     public Map<String, List<String>> scrape(String title, String abztract) {
         Map<String, List<String>> results = new ConcurrentHashMap<>();
-        
-        String query;
+
+        Query query;
         if (abztract != null && !"".equals(abztract)) {
-            query = String.format("\"%s\" \"%s\" \"%s\"", title, abztract, DEFAULT_ISSN_KW);
+            query = new StrictQuery(new Value(title, 25), new Value(abztract, 75), new Value(DEFAULT_ISSN_KW, -1));
         } else {
-            query = String.format("\"%s\" \"%s\"", title, DEFAULT_ISSN_KW);
+            query = new StrictQuery(new Value(title, 100), new Value(DEFAULT_ISSN_KW, -1));
         }
-        
+
         List<String> resultsSearch = searcher.getUrls(query, MAX_PAGES);
         for (String url : resultsSearch) {
             Set<String> issn = new HashSet<>();
             issn.addAll(findIssn(url));
             results.put(url, new ArrayList<>(issn));
         }
-        
+
         return results;
     }
-    
+
     @Override
     public Map<String, List<String>> scrape(String title) {
         return scrape(title, null);
     }
-    
+
     private List<String> findIssn(String url) {
         List<String> issn = new ArrayList<>();
         try {
@@ -102,7 +105,7 @@ public class PublicationIssnScrapper implements IssnScrapper {
                         .get();
             }
             Matcher matcher = PATTERN.matcher(doc.text());
-            
+
             while (matcher.find()) {
                 String issnFound = matcher.group();
                 if (issnFound.length() == 8) {
@@ -121,7 +124,7 @@ public class PublicationIssnScrapper implements IssnScrapper {
         } catch (IOException ex) {
             throw new RuntimeException(ex);
         }
-        
+
         return issn;
     }
 }

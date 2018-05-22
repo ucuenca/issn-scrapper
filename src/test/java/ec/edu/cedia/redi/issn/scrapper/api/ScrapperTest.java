@@ -40,7 +40,7 @@ public class ScrapperTest {
     @Test
     public void testScrapeTitleResults() {
         String title = "Detecting similar areas of knowledge using semantic and data mining technologies";
-        assertEquals("Size does not match", scrapper.scrape(title).size(), 9);
+        assertEquals("Size does not match", scrapper.scrape(title).size(), 3);
     }
 
     /**

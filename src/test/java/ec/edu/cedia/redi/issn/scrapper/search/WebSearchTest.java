@@ -15,7 +15,11 @@
  */
 package ec.edu.cedia.redi.issn.scrapper.search;
 
+import ec.edu.cedia.redi.issn.scrapper.search.query.Query;
+import ec.edu.cedia.redi.issn.scrapper.search.query.StrictQuery;
+import ec.edu.cedia.redi.issn.scrapper.search.query.Value;
 import org.junit.AfterClass;
+import static org.junit.Assert.assertEquals;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -27,9 +31,11 @@ public class WebSearchTest {
 
     public WebSearchTest() {
     }
+    private static Query query;
 
     @BeforeClass
     public static void setUpClass() {
+        query = new StrictQuery(new Value("it works", 100));
     }
 
     @AfterClass
@@ -39,13 +45,31 @@ public class WebSearchTest {
     @Test
     public void testGoogleSearch() {
         WebSearcher google = new GoogleSearch();
-        google.getUrls("it works", 6);
+        assertEquals(6, google.getUrls(query, 6).size());
     }
 
     @Test
     public void testBingSearch() {
         WebSearcher bing = new BingSearch();
-        bing.getUrls("it works", 10);
+        assertEquals(10, bing.getUrls(query, 10).size());
+    }
+
+    @Test
+    public void testBuildQuery() {
+        Query q = new StrictQuery(new Value("Identificación automática de artículos indexados en Latindex", 25),
+                new Value("Identifying researchers with accepted articles in relevant indexed repositories has become   \n"
+                        + "increasingly important in higher education, especially in Ecuador, where Latindex is one of \n"
+                        + "the most popular repositories. However, there is no automatic method to identify if an article \n"
+                        + "has been indexed in that repository and currently higher-education institutes (HEI) in \n"
+                        + "Ecuador have to manually recollect data about their indexed publications, providing control \n"
+                        + "entities with information difficult to verify. For this reason, in this paper we present an \n"
+                        + "approach to allow HEI and educational authorities to find publications that are indexed in \n"
+                        + "Latindex using a set of strategies, with the aim of providing a process to identify indexed \n"
+                        + "publications. Additionally, we implemented this approach as a prototype and evaluated it \n"
+                        + "with a sample of publications of Ecuadorian researchers, demonstrating that the", 75),
+                new Value("issn", -1));
+        assertEquals(220, q.buildQueryWords().length());
+        assertEquals(225, q.buildQueryCharacters().length());
     }
 
 }
