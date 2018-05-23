@@ -5,6 +5,7 @@
  */
 package ec.edu.cedia.redi.issn.scrapper.latindex;
 
+import com.google.common.base.Preconditions;
 import ec.edu.cedia.redi.issn.scrappe.redi.repository.Redi;
 import ec.edu.cedia.redi.issn.scrappe.redi.repository.RediRepository;
 import ec.edu.cedia.redi.issn.scrapper.model.Journal;
@@ -32,55 +33,40 @@ import org.slf4j.LoggerFactory;
  *
  * @author cedia
  */
-public class detectLatindex {
+public class DetectLatindex {
 
-    private static final Logger log = LoggerFactory.getLogger(detectLatindex.class);
+    private static final Logger log = LoggerFactory.getLogger(DetectLatindex.class);
 
-    final static String q1 = "%s %s %s %s"; // title + abstract + issn + journal
-    final static String q2 = "%s %s %s"; // title + abstract + issn
-    final static String q3 = "%s %s %s"; // title + abstract + journal
-    final static List<String> queries = new ArrayList<>();
-
-    static {
-        queries.add(q1);
-        queries.add(q2);
-        //queries.add(q3);
-    }
-
-    public static boolean webValidation(Publication p, Journal j) throws InterruptedException {
-
+    public static boolean webValidation(Publication p, Journal j, int lvl) throws InterruptedException {
+        Preconditions.checkArgument(lvl > 0 && lvl < 3);
         WebSearcher search = new GoogleSearch();
 
+        Query query = null;
         String title = p.getTitle();
         String abztract = p.getAbztract();
         String issn = j.getISSN();
-        String jorunal = j.getName();
-        if (abztract == null) {
-            System.out.println("no");
-            return false;
+        String journal = j.getName();
+        switch (lvl) {
+            case 1:
+                if (abztract == null) {
+                    query = new StrictQuery(new Value(title, 50), new Value(journal, 50), new Value(issn, -1));
+                } else {
+                    query = new StrictQuery(new Value(title, 25), new Value(abztract, 50), new Value(journal, 25), new Value(issn, -1));
+                }
+                break;
+            case 2:
+                if (abztract == null) {
+                    query = new StrictQuery(new Value(title, 100), new Value(issn, -1));
+                } else {
+                    query = new StrictQuery(new Value(title, 25), new Value(abztract, 75), new Value(issn, -1));
+                }
+                break;
         }
 
-        int tot = 32;
-        String e1 = getFirstNStrings(title, 10);
-        tot -= getFirstNStringsLen(title, 10);
-        String e2 = getFirstNStrings(abztract, 15);
-        tot -= getFirstNStringsLen(abztract, 15);
-        String e3 = issn;
-        tot -= 1;
-        String e4 = getFirstNStrings(jorunal, tot);
-
-        String q = String.format("\"%s\" \"%s\" \"%s\" \"%s\"", e1, e2, e3, e4);
-        Query query = new StrictQuery(new Value(e1, 25), new Value(e2, 50), new Value(e3, -1), new Value(e4, 25));
-        System.out.println(q);
         int randomNum = ThreadLocalRandom.current().nextInt(8, 15 + 1);
         Thread.sleep(randomNum * 1000);
         List<String> urls = search.getUrls(query, 1);
-        if (!urls.isEmpty()) {
-            System.out.println("ok");
-            return true;
-        }
-        System.out.println("no");
-        return false;
+        return !urls.isEmpty();
     }
 
     //Etapa 2: Validar
@@ -95,8 +81,11 @@ public class detectLatindex {
                 for (Map.Entry<String, String> s2 : stage2Candidates) {
                     if (p.getUri().equals(s2.getKey())) {
                         Journal get = latindexJournals.get(s2.getValue());
-                        if (webValidation(p, get)) {
-                            addLink(redi, "ValidatedStage2", p.getUri(), get.getURI());
+                        for (int lvl = 1; lvl <= 2; lvl++) {
+                            if (webValidation(p, get, lvl)) {
+                                addLink(redi, "ValidatedStage2", p.getUri(), get.getURI());
+                                break;
+                            }
                         }
                     }
                 }
@@ -136,11 +125,11 @@ public class detectLatindex {
                             //FindPotentialIssn findPotentialIssn = new FindPotentialIssn(redi,new GoogleSearch());
                             //findPotentialIssn.findPotentialIssn(p);
                         } catch (QueryEvaluationException ex) {
-                            java.util.logging.Logger.getLogger(detectLatindex.class.getName()).log(Level.SEVERE, null, ex);
+                            java.util.logging.Logger.getLogger(DetectLatindex.class.getName()).log(Level.SEVERE, null, ex);
                         } catch (RepositoryException ex) {
-                            java.util.logging.Logger.getLogger(detectLatindex.class.getName()).log(Level.SEVERE, null, ex);
+                            java.util.logging.Logger.getLogger(DetectLatindex.class.getName()).log(Level.SEVERE, null, ex);
                         } catch (MalformedQueryException ex) {
-                            java.util.logging.Logger.getLogger(detectLatindex.class.getName()).log(Level.SEVERE, null, ex);
+                            java.util.logging.Logger.getLogger(DetectLatindex.class.getName()).log(Level.SEVERE, null, ex);
                         }
                     }
                 });
