@@ -40,12 +40,15 @@ public class DetectLatindex {
 
     public static boolean webValidation(Publication p, Journal j, int lvl) throws InterruptedException {
         Preconditions.checkArgument(lvl > 0 && lvl < 3);
+        boolean thowEx = false;
 
         Query query = null;
         String title = p.getTitle();
         String abztract = p.getAbztract();
         String issn = j.getISSN();
         String journal = j.getName();
+
+        // Build query based on lvl1 or lvl2. Abstractis optional.
         switch (lvl) {
             case 1:
                 if (abztract == null) {
@@ -63,15 +66,26 @@ public class DetectLatindex {
                 break;
         }
 
+        // Select a web browser available. If the search fails, try with another 
+        // browsers. If there isn't a browser available, trow an exception.
         List<String> urls = Collections.emptyList();
-        ServiceLoader<WebSearcher> a = ServiceLoader.load(WebSearcher.class);
-        for (WebSearcher webSearcher : a) {
+        ServiceLoader<WebSearcher> loader = ServiceLoader.load(WebSearcher.class);
+        RuntimeException ex = null;
+        for (WebSearcher webSearcher : loader) {
             try {
                 urls = webSearcher.getUrls(query, 1);
+                thowEx = false;
+                break;
             } catch (RuntimeException e) {
-                throw e;
+                ex = e;
+                thowEx = true;
             }
         }
+
+        if (ex != null && thowEx) {
+            throw ex;
+        }
+
         return !urls.isEmpty();
     }
 
