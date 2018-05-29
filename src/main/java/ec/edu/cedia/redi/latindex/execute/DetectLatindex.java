@@ -8,22 +8,25 @@ package ec.edu.cedia.redi.latindex.execute;
 import com.google.common.base.Preconditions;
 import ec.edu.cedia.redi.latindex.api.Query;
 import ec.edu.cedia.redi.latindex.api.WebSearcher;
+import ec.edu.cedia.redi.latindex.model.Issn;
 import ec.edu.cedia.redi.latindex.model.Journal;
 import ec.edu.cedia.redi.latindex.model.Publication;
 import ec.edu.cedia.redi.latindex.repository.Redi;
 import ec.edu.cedia.redi.latindex.repository.RediRepository;
+import ec.edu.cedia.redi.latindex.search.BingSearch;
 import ec.edu.cedia.redi.latindex.search.query.StrictQuery;
 import ec.edu.cedia.redi.latindex.search.query.Value;
-import ec.edu.cedia.redi.latindex.utils.BoundedExecutor;
 import ec.edu.cedia.redi.latindex.utils.ModifiedJaccard;
-import java.util.ArrayList;
+import java.math.BigInteger;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.ServiceLoader;
 import java.util.Set;
-import java.util.logging.Level;
 import org.openrdf.query.MalformedQueryException;
 import org.openrdf.query.QueryEvaluationException;
 import org.openrdf.repository.RepositoryException;
@@ -89,87 +92,118 @@ public class DetectLatindex {
         return !urls.isEmpty();
     }
 
-    //Etapa 2: Validar
     public static void main(String[] args) throws RepositoryException, Exception {
         try (RediRepository r = RediRepository.getInstance()) {
             Redi redi = new Redi(r);
-            List<Map.Entry<String, String>> stage2Candidates = redi.getStage2Candidates();
-            List<Publication> publications = redi.getPublications2();
-            Map<String, Journal> latindexJournals = redi.getLatindexJournals2();
+            Map<String, Journal> latindexJournals = redi.getLatindexJournals();
+            for (int i = 0; i < 10000000; i += 1000) {
+                List<Publication> publications = redi.getPublications(i);
 
-            for (Publication p : publications) {
-                for (Map.Entry<String, String> s2 : stage2Candidates) {
-                    if (p.getUri().equals(s2.getKey())) {
-                        Journal get = latindexJournals.get(s2.getValue());
-                        for (int lvl = 1; lvl <= 2; lvl++) {
-                            if (webValidation(p, get, lvl)) {
-                                addLink(redi, "ValidatedStage2", p.getUri(), get.getURI());
-                                break;
+                int n = 0;
+                for (Publication p : publications) {
+                    n++;
+                    System.out.println(String.format("%s / %s", n + "", "" + publications.size()));
+                    String w = "http://mock.com/" + (getMD5(p.toString2()));
+                    if (!hasLink(redi, "SameAsJournals", p.getUri(), null)) {
+                        if (!hasLink(redi, "proccessed", p.getUri(), w)) {
+                            Set<String> results = new HashSet<>();
+                            results.addAll(processISSN(p, redi));
+                            if (results.isEmpty()) {
+                                results.addAll(processJournalName(p, redi, latindexJournals));
+                                if (results.isEmpty()) {
+                                    results.addAll(processWeb(p, redi, latindexJournals));
+                                }
                             }
+                            for (String res : results) {
+                                addLink(redi, "SameAsJournals", p.getUri(), res);
+                            }
+                            addLink(redi, "proccessed", p.getUri(), w);
                         }
                     }
+
                 }
-
             }
-
         }
     }
 
-    /// Etapa 1 ISSN, Etapa 2: Comparar nombres poner en 
-    public static void main_resp(String[] args) throws RepositoryException, Exception {
-        try (RediRepository r = RediRepository.getInstance()) {
-            Redi redi = new Redi(r);
-            List<Publication> publications = redi.getPublications();
-            Map<String, Journal> latindexJournals = redi.getLatindexJournals();
-            BoundedExecutor threadPool = BoundedExecutor.getThreadPool(2);
-            int n = 0;
-            for (Publication p : publications) {
-                n++;
-                final int nn = n;
-                threadPool.submitTask(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            //Stage 1 - ISSN
-                            Set<String> processISSN = processISSN(p, redi);
-                            if (processISSN.isEmpty()) {
-                                //Stage 2 - Name
-                                Set<String> processJournalName = processJournalName(p, redi, latindexJournals);
-
-                                //q1
-                                String q1 = "\"" + p.getTitle() + "\" ";
-
+    public static Set<String> processWeb(Publication p, Redi r, Map<String, Journal> jols) throws RepositoryException, InterruptedException {
+        Set<String> latJournals = new HashSet<>();
+        FindPotentialIssn f = new FindPotentialIssn(r, new BingSearch());
+        f.findPotentialIssn(p);
+        Map<String, Double> pesos = new HashMap<>();
+        if (!p.getIssnPerPage().isEmpty()) {
+            Set<String> issns = new HashSet<>();
+            for (List<Issn> l : p.getIssnPerPage().values()) {
+                for (Issn i : l) {
+                    issns.add(i.getIssn());
+                }
+            }
+            if (!issns.isEmpty()) {
+                for (String aissn : issns) {
+                    double df = 0;
+                    double N = p.getIssnPerPage().values().size();
+                    for (List<Issn> l : p.getIssnPerPage().values()) {
+                        boolean contains = false;
+                        for (Issn i : l) {
+                            if (i.getIssn().equals(aissn)) {
+                                contains = true;
+                                break;
                             }
-                            System.out.println("Fin " + nn);
-                            //Stage 3
-                            //FindPotentialIssn findPotentialIssn = new FindPotentialIssn(redi,new GoogleSearch());
-                            //findPotentialIssn.findPotentialIssn(p);
-                        } catch (QueryEvaluationException ex) {
-                            java.util.logging.Logger.getLogger(DetectLatindex.class.getName()).log(Level.SEVERE, null, ex);
-                        } catch (RepositoryException ex) {
-                            java.util.logging.Logger.getLogger(DetectLatindex.class.getName()).log(Level.SEVERE, null, ex);
-                        } catch (MalformedQueryException ex) {
-                            java.util.logging.Logger.getLogger(DetectLatindex.class.getName()).log(Level.SEVERE, null, ex);
+                        }
+                        if (contains) {
+                            df++;
                         }
                     }
-                });
+                    double sum = 0;
+                    for (List<Issn> l : p.getIssnPerPage().values()) {
+                        double nt = l.size();
+                        double tf = 0;
+                        for (Issn i : l) {
+                            if (i.getIssn().equals(aissn)) {
+                                tf++;
+                            }
+                        }
+
+                        sum += (tf * df) / (nt);
+                    }
+                    double res = sum / N;
+                    pesos.put(aissn, res);
+                }
+                for (Map.Entry<String, Double> en : pesos.entrySet()) {
+                    if (en.getValue() >= 0.75) {
+                        String uri = null;
+                        for (Issn in : p.getIssn()) {
+                            if (in.getIssn().equals(en.getKey())) {
+                                uri = in.getUri();
+                            }
+                        }
+                        Journal get = jols.get(uri);
+                        if (webValidation(p, get, 1)) {
+                            latJournals.add(uri);
+                        }
+                    }
+                }
             }
-            threadPool.end();
         }
+        return latJournals;
+    }
+
+    public static boolean hasLink(Redi r, String suff, String p, String j) throws RepositoryException {
+        return r.hasSt(p, "http://www.w3.org/2000/01/rdf-schema#seeAlso", j, Redi.LATINDEX_CONTEXT + suff);
     }
 
     public static void addLink(Redi r, String suff, String p, String j) throws RepositoryException {
         r.addSt(p, "http://www.w3.org/2000/01/rdf-schema#seeAlso", j, Redi.LATINDEX_CONTEXT + suff);
     }
 
-    public static Set<String> processJournalName(Publication p, Redi r, Map<String, Journal> latindexJournals) throws QueryEvaluationException, RepositoryException, MalformedQueryException {
+    public static Set<String> processJournalName(Publication p, Redi r, Map<String, Journal> latindexJournals) throws QueryEvaluationException, RepositoryException, MalformedQueryException, InterruptedException {
         Set<String> latJournals = new HashSet<>();
         if (p.getOjournal() != null) {
-            List<Journal> CandidatesList = new ArrayList<>();
             for (Journal onePossibleJournal : latindexJournals.values()) {
                 if (JournalNameComparison(p.getOjournal(), onePossibleJournal.getName())) {
-                    CandidatesList.add(onePossibleJournal);
-                    addLink(r, "SameAsCandidates1", p.getUri(), onePossibleJournal.getURI());
+                    if (webValidation(p, onePossibleJournal, 1) || webValidation(p, onePossibleJournal, 2)) {
+                        latJournals.add(onePossibleJournal.getURI());
+                    }
                 }
             }
         }
@@ -182,7 +216,6 @@ public class DetectLatindex {
             List<String> latindexJournalByISSN = r.getLatindexJournalByISSN(p.getOissn());
             for (String latId : latindexJournalByISSN) {
                 latJournals.add(latId);
-                addLink(r, "SameAsPublications1", p.getUri(), latId);
             }
         }
         return latJournals;
@@ -206,6 +239,22 @@ public class DetectLatindex {
         List<String> tokenizer = mod.tokenizer(str);
         List<String> subList = tokenizer.subList(0, n < tokenizer.size() ? n : tokenizer.size());
         return String.join(" ", subList);
+    }
+
+    public static String getMD5(String input) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("MD5");
+            byte[] messageDigest = md.digest(input.getBytes());
+            BigInteger number = new BigInteger(1, messageDigest);
+            String hashtext = number.toString(16);
+            // Now we need to zero pad it if you actually want the full 32 chars.
+            while (hashtext.length() < 32) {
+                hashtext = "0" + hashtext;
+            }
+            return hashtext;
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
+        }
     }
 
 }

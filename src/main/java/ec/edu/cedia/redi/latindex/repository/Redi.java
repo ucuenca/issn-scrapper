@@ -101,7 +101,7 @@ public class Redi {
         return ls;
     }
 
-    public List<Publication> getPublications() throws QueryEvaluationException {
+    public List<Publication> getPublications(int off) throws QueryEvaluationException {
         List<Publication> publications = new ArrayList<>();
 
         try {
@@ -110,55 +110,21 @@ public class Redi {
                     + "PREFIX foaf: <http://xmlns.com/foaf/0.1/>\n"
                     + "PREFIX bibo: <http://purl.org/ontology/bibo/>\n"
                     + "SELECT DISTINCT * WHERE { \n"
-                    + "  GRAPH ?pubGraph {  \n"
-                    + "    [] foaf:publications ?p\n"
-                    + "  }\n"
+                    //+ "  GRAPH ?pubGraph {  \n"
+                    //+ "    [] foaf:publications ?p\n"
+                    //+ "  }\n"
                     + "  GRAPH ?dataGraph {  \n"
+                    //+ "    [] foaf:publications ?p .\n"
                     + "    ?p dct:title ?t.\n"
                     + "    OPTIONAL { ?p bibo:abstract ?a. }\n"
                     + "    OPTIONAL { ?p bibo:issn ?i. }\n"
                     + "    OPTIONAL { ?p dct:isPartOf ?j. }\n"
                     + "    OPTIONAL { ?j rdfs:label ?jl. }\n"
                     + "  }\n"
-                    + "}";
+                    + "} offset " + off + " limit 1000";
 
             TupleQuery q = connection.prepareTupleQuery(QueryLanguage.SPARQL, query);
-            q.setBinding("pubGraph", vf.createURI(PUB_CONTEXT));
-            getPublicationsGraph(q, publications, PUB_CONTEXT);
-
-            connection.close();
-        } catch (RepositoryException | MalformedQueryException ex) {
-            log.error("Cannot query publications", ex);
-        }
-        return publications;
-    }
-
-    public List<Publication> getPublications2() throws QueryEvaluationException {
-        List<Publication> publications = new ArrayList<>();
-
-        try {
-            RepositoryConnection connection = conn.getConnection();
-            String query = "PREFIX dct: <http://purl.org/dc/terms/>\n"
-                    + "PREFIX foaf: <http://xmlns.com/foaf/0.1/>\n"
-                    + "PREFIX bibo: <http://purl.org/ontology/bibo/>\n"
-                    + "SELECT DISTINCT * WHERE { \n"
-                    + "	graph <" + Redi.LATINDEX_CONTEXT + "SameAsCandidates1> {\n"
-                    + "    	?p <http://www.w3.org/2000/01/rdf-schema#seeAlso> [] .\n"
-                    + "    }\n"
-                    + "  GRAPH ?pubGraph {  \n"
-                    + "    [] foaf:publications ?p\n"
-                    + "  }\n"
-                    + "  GRAPH ?dataGraph {  \n"
-                    + "    ?p dct:title ?t.\n"
-                    + "    OPTIONAL { ?p bibo:abstract ?a. }\n"
-                    + "    OPTIONAL { ?p bibo:issn ?i. }\n"
-                    + "    OPTIONAL { ?p dct:isPartOf ?j. }\n"
-                    + "    OPTIONAL { ?j rdfs:label ?jl. }\n"
-                    + "  }\n"
-                    + "}";
-
-            TupleQuery q = connection.prepareTupleQuery(QueryLanguage.SPARQL, query);
-            q.setBinding("pubGraph", vf.createURI(PUB_CONTEXT));
+            //q.setBinding("pubGraph", vf.createURI(PUB_CONTEXT));
             getPublicationsGraph(q, publications, PUB_CONTEXT);
 
             connection.close();
@@ -483,46 +449,17 @@ public class Redi {
         return allLatindexJournalsObjects;
     }
 
-    public Map<String, Journal> getLatindexJournals2() throws RepositoryException, MalformedQueryException, QueryEvaluationException {
-        //Extracting Latindex journals
-        String q = "SELECT DISTINCT ?JOURNAL ?NAME ?TOPIC ?YEAR ?ISSN { "
-                + "	graph <" + Redi.LATINDEX_CONTEXT + "SameAsCandidates1> {\n"
-                + "    	[] <http://www.w3.org/2000/01/rdf-schema#seeAlso> ?JOURNAL .\n"
-                + "    }\n"
-                + " GRAPH <" + Redi.LATINDEX_CONTEXT + "> {   "
-                + "?JOURNAL a <http://www.ucuenca.edu.ec/ontology/journal> . "
-                + "?JOURNAL <http://www.ucuenca.edu.ec/ontology/tit_clave> ?NAME ."
-                + "?JOURNAL <http://www.ucuenca.edu.ec/ontology/subtema> ?TOPIC ."
-                + "?JOURNAL <http://www.ucuenca.edu.ec/ontology/ano_ini> ?YEAR ."
-                + "?JOURNAL <http://www.ucuenca.edu.ec/ontology/issn> ?ISSN ."
-                + "} "
-                + "}";
-
-        List<Map<String, Value>> allLatindexJournals = query(q);
-        Map< String, Journal> allLatindexJournalsObjects = new HashMap<>();
-        for (Map<String, Value> aLatindexJournal : allLatindexJournals) {
-            String JournalURI = aLatindexJournal.get("JOURNAL").stringValue();
-            String JournalName = aLatindexJournal.get("NAME").stringValue().replaceAll("\\(.*?\\)", " ").trim();
-            String JournalTopic = aLatindexJournal.get("TOPIC").stringValue();
-            String JournalYear = aLatindexJournal.get("YEAR").stringValue();
-            String JournalISSN = aLatindexJournal.get("ISSN").stringValue();
-
-            int JournalYearInt = 0;
-            try {
-                JournalYearInt = Integer.parseInt(JournalYear);
-            } catch (Exception ex) {
-                log.warn("Invalid year {} in the central graph publication {}.", JournalYear, JournalURI);
-            }
-
-            if (allLatindexJournalsObjects.containsKey(JournalURI)) {
-                allLatindexJournalsObjects.get(JournalURI).getTopics().add(JournalTopic);
-            } else {
-                Journal newLatindexJournal = new Journal(JournalURI, JournalName, JournalISSN, new ArrayList<String>(), JournalYearInt);
-                newLatindexJournal.getTopics().add(JournalTopic);
-                allLatindexJournalsObjects.put(JournalURI, newLatindexJournal);
-            }
-        }
-        return allLatindexJournalsObjects;
+    public boolean hasSt(String s, String p, String o, String c) throws RepositoryException {
+        boolean t = false;
+        RepositoryConnection connection = this.conn.getConnection();
+        connection.begin();
+        URI su = vf.createURI(s);
+        URI pu = vf.createURI(p);
+        URI ou = o != null ? vf.createURI(o) : null;
+        URI cu = vf.createURI(c);
+        t = connection.hasStatement(su, pu, ou, false, cu);
+        connection.commit();
+        connection.close();
+        return t;
     }
-
 }

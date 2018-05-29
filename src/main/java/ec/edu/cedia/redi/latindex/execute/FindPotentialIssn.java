@@ -83,7 +83,7 @@ public class FindPotentialIssn {
         try (RediRepository r = RediRepository.getInstance()) {
             Redi redi = new Redi(r);
             FindPotentialIssn finder = new FindPotentialIssn(redi, new GoogleSearch());
-            List<Publication> publications = redi.getPublications();
+            List<Publication> publications = redi.getPublications(0);
             for (Publication p : publications) {
                 if (!redi.hasPubPotentialIssn(p)) {
                     finder.findPotentialIssn(p);
