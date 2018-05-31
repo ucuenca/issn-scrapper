@@ -32,6 +32,7 @@ import org.openrdf.model.impl.ValueFactoryImpl;
 import org.openrdf.model.vocabulary.OWL;
 import org.openrdf.query.Binding;
 import org.openrdf.query.BindingSet;
+import org.openrdf.query.BooleanQuery;
 import org.openrdf.query.MalformedQueryException;
 import org.openrdf.query.QueryEvaluationException;
 import org.openrdf.query.QueryLanguage;
@@ -76,18 +77,28 @@ public class Redi {
 
     }
 
-    public List<String> getLatindexJournalByISSN(String issn) throws QueryEvaluationException {
+    public List<String> getLatindexJournalByISSN(String issn, boolean v) throws QueryEvaluationException {
         List<String> ls = new ArrayList<>();
         try {
             RepositoryConnection connection = conn.getConnection();
             String q = "SELECT distinct ?a WHERE { \n"
                     + "  values ?g { <https://redi.cedia.edu.ec/context/latindex> <https://redi.cedia.edu.ec/context/latindexAugmentInfo>}\n"
                     + "  GRAPH ?g {  \n"
-                    + "    ?a <http://www.ucuenca.edu.ec/ontology/issn> ?c .\n"
+                    + "    ?a <http://www.ucuenca.edu.ec/ontology/issn> ?o1 .\n"
+                    + "    FILTER (regex(str(?o1), str(?issn), \"i\"))  \n"
                     + "  }\n"
                     + "}";
             TupleQuery prepareTupleQuery = connection.prepareTupleQuery(QueryLanguage.SPARQL, q);
-            prepareTupleQuery.setBinding("c", vf.createLiteral(issn));
+
+            String var = issn.replaceAll("-", "").toLowerCase().trim();
+            while (var.length() < 8) {
+                var = "0" + var;
+            }
+
+            if (v) {
+                var = var.substring(0, 4) + "-" + var.substring(4, var.length());
+            }
+            prepareTupleQuery.setBinding("issn", vf.createLiteral(var));
             TupleQueryResult evaluate = prepareTupleQuery.evaluate();
             while (evaluate.hasNext()) {
                 BindingSet next = evaluate.next();
@@ -121,7 +132,7 @@ public class Redi {
                     + "    OPTIONAL { ?p dct:isPartOf ?j. }\n"
                     + "    OPTIONAL { ?j rdfs:label ?jl. }\n"
                     + "  }\n"
-                    + "} offset " + off + " limit 1000";
+                    + "} offset " + off + " limit 10";
 
             TupleQuery q = connection.prepareTupleQuery(QueryLanguage.SPARQL, query);
             //q.setBinding("pubGraph", vf.createURI(PUB_CONTEXT));
@@ -449,15 +460,20 @@ public class Redi {
         return allLatindexJournalsObjects;
     }
 
-    public boolean hasSt(String s, String p, String o, String c) throws RepositoryException {
+    public boolean hasSt(String s, String p, String o, String c) throws RepositoryException, MalformedQueryException, QueryEvaluationException {
         boolean t = false;
         RepositoryConnection connection = this.conn.getConnection();
         connection.begin();
-        URI su = vf.createURI(s);
-        URI pu = vf.createURI(p);
-        URI ou = o != null ? vf.createURI(o) : null;
-        URI cu = vf.createURI(c);
-        t = connection.hasStatement(su, pu, ou, false, cu);
+        BooleanQuery prepareBooleanQuery = null;
+
+        if (o != null) {
+            prepareBooleanQuery = connection.prepareBooleanQuery(QueryLanguage.SPARQL,
+                    "ask from <" + c + "> { <" + s + "> <" + p + "> <" + o + "> }");
+        } else {
+            prepareBooleanQuery = connection.prepareBooleanQuery(QueryLanguage.SPARQL,
+                    "ask from <" + c + "> { <" + s + "> <" + p + "> ?o }");
+        }
+        t = prepareBooleanQuery.evaluate();
         connection.commit();
         connection.close();
         return t;

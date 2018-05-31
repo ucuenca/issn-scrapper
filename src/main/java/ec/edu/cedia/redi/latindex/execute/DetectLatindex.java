@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.ServiceLoader;
 import java.util.Set;
+import java.util.logging.Level;
 import org.openrdf.query.MalformedQueryException;
 import org.openrdf.query.QueryEvaluationException;
 import org.openrdf.repository.RepositoryException;
@@ -92,32 +93,51 @@ public class DetectLatindex {
         return !urls.isEmpty();
     }
 
-    public static void main(String[] args) throws RepositoryException, Exception {
+    public static void main(String[] args) throws InterruptedException {
+        do {
+            try {
+                main2(null);
+                break;
+            } catch (Exception ex) {
+                java.util.logging.Logger.getLogger(DetectLatindex.class.getName()).log(Level.SEVERE, null, ex);
+                Thread.sleep(5 * 1000);
+            }
+        } while (true);
+    }
+
+    private static int last = 0;
+
+    public static void main2(String[] args) throws RepositoryException, Exception {
         try (RediRepository r = RediRepository.getInstance()) {
             Redi redi = new Redi(r);
             Map<String, Journal> latindexJournals = redi.getLatindexJournals();
-            for (int i = 0; i < 10000000; i += 1000) {
+            for (int i = last; i < 10000000; i += 10) {
+                last = i;
                 List<Publication> publications = redi.getPublications(i);
 
                 int n = 0;
                 for (Publication p : publications) {
                     n++;
-                    System.out.println(String.format("%s / %s", n + "", "" + publications.size()));
+                    System.out.println(String.format("%s + %s / %s", n + "", i + "", "" + publications.size()));
                     String w = "http://mock.com/" + (getMD5(p.toString2()));
                     if (!hasLink(redi, "SameAsJournals", p.getUri(), null)) {
-                        if (!hasLink(redi, "proccessed", p.getUri(), w)) {
+                        if (!hasLink(redi, "Processed", p.getUri(), w)) {
                             Set<String> results = new HashSet<>();
-                            results.addAll(processISSN(p, redi));
-                            if (results.isEmpty()) {
-                                results.addAll(processJournalName(p, redi, latindexJournals));
+                            if (p.getOissn() != null) {
+                                results.addAll(processISSN(p, redi));
+                            } else {
                                 if (results.isEmpty()) {
-                                    results.addAll(processWeb(p, redi, latindexJournals));
+                                    if (p.getOjournal() != null) {
+                                        results.addAll(processJournalName(p, redi, latindexJournals));
+                                    } else if (results.isEmpty()) {
+                                        results.addAll(processWeb(p, redi, latindexJournals));
+                                    }
                                 }
                             }
                             for (String res : results) {
                                 addLink(redi, "SameAsJournals", p.getUri(), res);
                             }
-                            addLink(redi, "proccessed", p.getUri(), w);
+                            addLink(redi, "Processed", p.getUri(), w);
                         }
                     }
 
@@ -163,14 +183,15 @@ public class DetectLatindex {
                                 tf++;
                             }
                         }
+                        double s = nt > 0 ? (tf * df) / (nt) : 0;
+                        sum += s;
 
-                        sum += (tf * df) / (nt);
                     }
-                    double res = sum / N;
+                    double res = N > 0 ? sum / N : 0;
                     pesos.put(aissn, res);
                 }
                 for (Map.Entry<String, Double> en : pesos.entrySet()) {
-                    if (en.getValue() >= 0.75) {
+                    if (en.getValue() >= 0.5) {
                         String uri = null;
                         for (Issn in : p.getIssn()) {
                             if (in.getIssn().equals(en.getKey())) {
@@ -188,7 +209,7 @@ public class DetectLatindex {
         return latJournals;
     }
 
-    public static boolean hasLink(Redi r, String suff, String p, String j) throws RepositoryException {
+    public static boolean hasLink(Redi r, String suff, String p, String j) throws RepositoryException, MalformedQueryException, QueryEvaluationException {
         return r.hasSt(p, "http://www.w3.org/2000/01/rdf-schema#seeAlso", j, Redi.LATINDEX_CONTEXT + suff);
     }
 
@@ -213,7 +234,8 @@ public class DetectLatindex {
     public static Set<String> processISSN(Publication p, Redi r) throws QueryEvaluationException, RepositoryException {
         Set<String> latJournals = new HashSet<>();
         if (p.getOissn() != null) {
-            List<String> latindexJournalByISSN = r.getLatindexJournalByISSN(p.getOissn());
+            List<String> latindexJournalByISSN = r.getLatindexJournalByISSN(p.getOissn(), false);
+            latindexJournalByISSN.addAll(r.getLatindexJournalByISSN(p.getOissn(), true));
             for (String latId : latindexJournalByISSN) {
                 latJournals.add(latId);
             }
