@@ -561,4 +561,15 @@ public class Redi {
             }
         }
     }
+
+    public boolean isValidURI(String uri) throws RepositoryException {
+        boolean t = false;
+        try {
+            new java.net.URI(uri);
+            t = true;
+        } catch (Exception e) {
+            log.info("Invalid URI {} ignoring", uri);
+        }
+        return t;
+    }
 }

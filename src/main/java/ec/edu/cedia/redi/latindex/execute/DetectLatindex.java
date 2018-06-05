@@ -105,7 +105,7 @@ public class DetectLatindex {
         } while (true);
     }
 
-    private static int last = 166440;
+    private static int last = 170800;
 
     public static void main2(String[] args) throws RepositoryException, Exception {
         try (RediRepository r = RediRepository.getInstance()) {
@@ -120,7 +120,7 @@ public class DetectLatindex {
                     n++;
                     System.out.println(String.format("%s + %s / %s", n + "", i + "", "" + publications.size()));
                     String w = "http://mock.com/" + (getMD5(p.toString2()));
-                    if (!hasLink(redi, "SameAsJournals", p.getUri(), null)) {
+                    if (isValidURI(redi, p.getUri()) && !hasLink(redi, "SameAsJournals", p.getUri(), null)) {
                         if (!hasLink(redi, "Processed", p.getUri(), w)) {
                             Set<String> results = new HashSet<>();
                             if (p.getOissn() != null) {
@@ -207,6 +207,10 @@ public class DetectLatindex {
             }
         }
         return latJournals;
+    }
+
+    public static boolean isValidURI(Redi r, String uri) throws RepositoryException {
+        return r.isValidURI(uri);
     }
 
     public static boolean hasLink(Redi r, String suff, String p, String j) throws RepositoryException, MalformedQueryException, QueryEvaluationException {
