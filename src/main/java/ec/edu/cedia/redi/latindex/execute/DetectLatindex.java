@@ -105,7 +105,7 @@ public class DetectLatindex {
         } while (true);
     }
 
-    private static int last = 170800;
+    private static int last = 182280;
 
     public static void main2(String[] args) throws RepositoryException, Exception {
         try (RediRepository r = RediRepository.getInstance()) {
