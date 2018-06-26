@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.net.URLEncoder;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -32,8 +33,8 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
-import javax.net.ssl.SSLProtocolException;
 import org.jsoup.HttpStatusException;
 import org.jsoup.Jsoup;
 import org.jsoup.UnsupportedMimeTypeException;
@@ -118,12 +119,16 @@ public class PublicationIssnScrapper implements IssnScrapper {
             log.warn("Cannot make request, probably google cache does have the url {}", url);
         } catch (UnsupportedMimeTypeException ex) {
             log.warn("Don't understand MIME Type for url {}", url);
-        } catch (SocketTimeoutException | SocketException ex) {
+        } catch (SocketTimeoutException | SocketException | UnknownHostException ex) {
             log.warn("{} for {}", ex.getMessage(), url);
-        } catch (SSLProtocolException ex) {
+        } catch (SSLException ex) {
             log.warn("Cannot extract ISSNs for url ({}) due to SSL errors.", url);
         } catch (IOException ex) {
-            throw new RuntimeException(ex);
+            if (ex.getMessage().contains("Too many redirects occurred trying to load URL")){
+                log.warn("Cannot extract ISSNs for url ({}) due to Too many redirects errors.", url);
+            }else{
+                throw new RuntimeException(ex);
+            }
         }
 
         return issn;

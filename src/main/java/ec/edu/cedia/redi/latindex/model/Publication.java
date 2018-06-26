@@ -99,4 +99,8 @@ public class Publication {
     public void setOjournal(String ojournal) {
         this.ojournal = ojournal;
     }
+    
+    public String toString2() {
+        return "Publication{" + "uri=" + uri + ", title=" + title + ", abztract=" + abztract + ", oissn=" + oissn + ", ojournal=" + ojournal + '}';
+    }
 }

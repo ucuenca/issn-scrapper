@@ -18,6 +18,7 @@ package ec.edu.cedia.redi.latindex.repository;
 import ec.edu.cedia.redi.latindex.model.Issn;
 import ec.edu.cedia.redi.latindex.model.Journal;
 import ec.edu.cedia.redi.latindex.model.Publication;
+import ec.edu.cedia.redi.latindex.utils.HTTPUtils;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -32,11 +33,13 @@ import org.openrdf.model.impl.ValueFactoryImpl;
 import org.openrdf.model.vocabulary.OWL;
 import org.openrdf.query.Binding;
 import org.openrdf.query.BindingSet;
+import org.openrdf.query.BooleanQuery;
 import org.openrdf.query.MalformedQueryException;
 import org.openrdf.query.QueryEvaluationException;
 import org.openrdf.query.QueryLanguage;
 import org.openrdf.query.TupleQuery;
 import org.openrdf.query.TupleQueryResult;
+import org.openrdf.query.UpdateExecutionException;
 import org.openrdf.repository.RepositoryConnection;
 import org.openrdf.repository.RepositoryException;
 import org.slf4j.Logger;
@@ -76,18 +79,28 @@ public class Redi {
 
     }
 
-    public List<String> getLatindexJournalByISSN(String issn) throws QueryEvaluationException {
+    public List<String> getLatindexJournalByISSN(String issn, boolean v) throws QueryEvaluationException {
         List<String> ls = new ArrayList<>();
         try {
             RepositoryConnection connection = conn.getConnection();
             String q = "SELECT distinct ?a WHERE { \n"
                     + "  values ?g { <https://redi.cedia.edu.ec/context/latindex> <https://redi.cedia.edu.ec/context/latindexAugmentInfo>}\n"
                     + "  GRAPH ?g {  \n"
-                    + "    ?a <http://www.ucuenca.edu.ec/ontology/issn> ?c .\n"
+                    + "    ?a <http://www.ucuenca.edu.ec/ontology/issn> ?o1 .\n"
+                    + "    FILTER (regex(str(?o1), str(?issn), \"i\"))  \n"
                     + "  }\n"
                     + "}";
             TupleQuery prepareTupleQuery = connection.prepareTupleQuery(QueryLanguage.SPARQL, q);
-            prepareTupleQuery.setBinding("c", vf.createLiteral(issn));
+
+            String var = issn.replaceAll("-", "").toLowerCase().trim();
+            while (var.length() < 8) {
+                var = "0" + var;
+            }
+
+            if (v) {
+                var = var.substring(0, 4) + "-" + var.substring(4, var.length());
+            }
+            prepareTupleQuery.setBinding("issn", vf.createLiteral(var));
             TupleQueryResult evaluate = prepareTupleQuery.evaluate();
             while (evaluate.hasNext()) {
                 BindingSet next = evaluate.next();
@@ -101,7 +114,7 @@ public class Redi {
         return ls;
     }
 
-    public List<Publication> getPublications() throws QueryEvaluationException {
+    public List<Publication> getPublications(int off) throws QueryEvaluationException {
         List<Publication> publications = new ArrayList<>();
 
         try {
@@ -110,55 +123,21 @@ public class Redi {
                     + "PREFIX foaf: <http://xmlns.com/foaf/0.1/>\n"
                     + "PREFIX bibo: <http://purl.org/ontology/bibo/>\n"
                     + "SELECT DISTINCT * WHERE { \n"
-                    + "  GRAPH ?pubGraph {  \n"
-                    + "    [] foaf:publications ?p\n"
-                    + "  }\n"
+                    //+ "  GRAPH ?pubGraph {  \n"
+                    //+ "    [] foaf:publications ?p\n"
+                    //+ "  }\n"
                     + "  GRAPH ?dataGraph {  \n"
+                    //+ "    [] foaf:publications ?p .\n"
                     + "    ?p dct:title ?t.\n"
                     + "    OPTIONAL { ?p bibo:abstract ?a. }\n"
                     + "    OPTIONAL { ?p bibo:issn ?i. }\n"
                     + "    OPTIONAL { ?p dct:isPartOf ?j. }\n"
                     + "    OPTIONAL { ?j rdfs:label ?jl. }\n"
                     + "  }\n"
-                    + "}";
+                    + "} offset " + off + " limit 10";
 
             TupleQuery q = connection.prepareTupleQuery(QueryLanguage.SPARQL, query);
-            q.setBinding("pubGraph", vf.createURI(PUB_CONTEXT));
-            getPublicationsGraph(q, publications, PUB_CONTEXT);
-
-            connection.close();
-        } catch (RepositoryException | MalformedQueryException ex) {
-            log.error("Cannot query publications", ex);
-        }
-        return publications;
-    }
-
-    public List<Publication> getPublications2() throws QueryEvaluationException {
-        List<Publication> publications = new ArrayList<>();
-
-        try {
-            RepositoryConnection connection = conn.getConnection();
-            String query = "PREFIX dct: <http://purl.org/dc/terms/>\n"
-                    + "PREFIX foaf: <http://xmlns.com/foaf/0.1/>\n"
-                    + "PREFIX bibo: <http://purl.org/ontology/bibo/>\n"
-                    + "SELECT DISTINCT * WHERE { \n"
-                    + "	graph <" + Redi.LATINDEX_CONTEXT + "SameAsCandidates1> {\n"
-                    + "    	?p <http://www.w3.org/2000/01/rdf-schema#seeAlso> [] .\n"
-                    + "    }\n"
-                    + "  GRAPH ?pubGraph {  \n"
-                    + "    [] foaf:publications ?p\n"
-                    + "  }\n"
-                    + "  GRAPH ?dataGraph {  \n"
-                    + "    ?p dct:title ?t.\n"
-                    + "    OPTIONAL { ?p bibo:abstract ?a. }\n"
-                    + "    OPTIONAL { ?p bibo:issn ?i. }\n"
-                    + "    OPTIONAL { ?p dct:isPartOf ?j. }\n"
-                    + "    OPTIONAL { ?j rdfs:label ?jl. }\n"
-                    + "  }\n"
-                    + "}";
-
-            TupleQuery q = connection.prepareTupleQuery(QueryLanguage.SPARQL, query);
-            q.setBinding("pubGraph", vf.createURI(PUB_CONTEXT));
+            //q.setBinding("pubGraph", vf.createURI(PUB_CONTEXT));
             getPublicationsGraph(q, publications, PUB_CONTEXT);
 
             connection.close();
@@ -483,46 +462,114 @@ public class Redi {
         return allLatindexJournalsObjects;
     }
 
-    public Map<String, Journal> getLatindexJournals2() throws RepositoryException, MalformedQueryException, QueryEvaluationException {
-        //Extracting Latindex journals
-        String q = "SELECT DISTINCT ?JOURNAL ?NAME ?TOPIC ?YEAR ?ISSN { "
-                + "	graph <" + Redi.LATINDEX_CONTEXT + "SameAsCandidates1> {\n"
-                + "    	[] <http://www.w3.org/2000/01/rdf-schema#seeAlso> ?JOURNAL .\n"
-                + "    }\n"
-                + " GRAPH <" + Redi.LATINDEX_CONTEXT + "> {   "
-                + "?JOURNAL a <http://www.ucuenca.edu.ec/ontology/journal> . "
-                + "?JOURNAL <http://www.ucuenca.edu.ec/ontology/tit_clave> ?NAME ."
-                + "?JOURNAL <http://www.ucuenca.edu.ec/ontology/subtema> ?TOPIC ."
-                + "?JOURNAL <http://www.ucuenca.edu.ec/ontology/ano_ini> ?YEAR ."
-                + "?JOURNAL <http://www.ucuenca.edu.ec/ontology/issn> ?ISSN ."
-                + "} "
-                + "}";
+    public boolean hasSt(String s, String p, String o, String c) throws RepositoryException, MalformedQueryException, QueryEvaluationException {
+        boolean t = false;
+        RepositoryConnection connection = this.conn.getConnection();
+        connection.begin();
+        BooleanQuery prepareBooleanQuery = null;
 
-        List<Map<String, Value>> allLatindexJournals = query(q);
-        Map< String, Journal> allLatindexJournalsObjects = new HashMap<>();
-        for (Map<String, Value> aLatindexJournal : allLatindexJournals) {
-            String JournalURI = aLatindexJournal.get("JOURNAL").stringValue();
-            String JournalName = aLatindexJournal.get("NAME").stringValue().replaceAll("\\(.*?\\)", " ").trim();
-            String JournalTopic = aLatindexJournal.get("TOPIC").stringValue();
-            String JournalYear = aLatindexJournal.get("YEAR").stringValue();
-            String JournalISSN = aLatindexJournal.get("ISSN").stringValue();
-
-            int JournalYearInt = 0;
-            try {
-                JournalYearInt = Integer.parseInt(JournalYear);
-            } catch (Exception ex) {
-                log.warn("Invalid year {} in the central graph publication {}.", JournalYear, JournalURI);
-            }
-
-            if (allLatindexJournalsObjects.containsKey(JournalURI)) {
-                allLatindexJournalsObjects.get(JournalURI).getTopics().add(JournalTopic);
-            } else {
-                Journal newLatindexJournal = new Journal(JournalURI, JournalName, JournalISSN, new ArrayList<String>(), JournalYearInt);
-                newLatindexJournal.getTopics().add(JournalTopic);
-                allLatindexJournalsObjects.put(JournalURI, newLatindexJournal);
-            }
+        if (o != null) {
+            prepareBooleanQuery = connection.prepareBooleanQuery(QueryLanguage.SPARQL,
+                    "ask from <" + c + "> { <" + s + "> <" + p + "> <" + o + "> }");
+        } else {
+            prepareBooleanQuery = connection.prepareBooleanQuery(QueryLanguage.SPARQL,
+                    "ask from <" + c + "> { <" + s + "> <" + p + "> ?o }");
         }
-        return allLatindexJournalsObjects;
+        t = prepareBooleanQuery.evaluate();
+        connection.commit();
+        connection.close();
+        return t;
     }
 
+    public void updateOtherIndexes() throws RepositoryException, MalformedQueryException, UpdateExecutionException {
+        String q = "PREFIX dct: <http://purl.org/dc/terms/>\n"
+                + "PREFIX foaf: <http://xmlns.com/foaf/0.1/>\n"
+                + "insert {\n"
+                + "	graph <" + PUB_CONTEXT + "> {\n"
+                + "    	?j <http://ucuenca.edu.ec/ontology#index> ?pr.\n"
+                + "    }\n"
+                + "}where {\n"
+                + "	graph <" + PUB_CONTEXT + "> {\n"
+                + "  		[] foaf:publications ?p .\n"
+                + "      	values ?pr {<http://ucuenca.edu.ec/ontology#SpringerProvider>\n"
+                + "                   <http://ucuenca.edu.ec/ontology#ScopusProvider>\n"
+                + "                   <http://ucuenca.edu.ec/ontology#Scielo>\n"
+                + "                   } .\n"
+                + "      	?p dct:provenance ?pr .\n"
+                + "      	?p dct:isPartOf ?j .\n"
+                + "      	filter not exists { ?j <http://ucuenca.edu.ec/ontology#index> <http://ucuenca.edu.ec/ontology#Latindex> . }\n"
+                + "    }\n"
+                + "}";
+        RepositoryConnection connection = conn.getConnection();
+        connection.begin();
+        connection.prepareUpdate(QueryLanguage.SPARQL, q).execute();
+        connection.commit();
+        connection.close();
+    }
+
+    public void updateLatindex() throws RepositoryException, MalformedQueryException, UpdateExecutionException {
+        String q = "PREFIX dct: <http://purl.org/dc/terms/>\n"
+                + "PREFIX foaf: <http://xmlns.com/foaf/0.1/>\n"
+                + "PREFIX bibo: <http://purl.org/ontology/bibo/>\n"
+                + "insert {\n"
+                + "	graph <" + PUB_CONTEXT + "> {\n"
+                + "    	?p dct:isPartOf ?j .\n"
+                + "  		?j a bibo:Journal .\n"
+                + "  		?j <http://www.w3.org/2000/01/rdf-schema#label> ?tit .\n"
+                + "  		?j <http://ucuenca.edu.ec/ontology#index> <http://ucuenca.edu.ec/ontology#Latindex> .\n"
+                + "    }\n"
+                + "}where {\n"
+                + "	graph <" + PUB_CONTEXT + "> {\n"
+                + "  		[] foaf:publications ?p .\n"
+                + "    }\n"
+                + "    graph <" + LATINDEX_CONTEXT + "SameAsJournals> {\n"
+                + "		?p <http://www.w3.org/2000/01/rdf-schema#seeAlso> ?j .\n"
+                + "    }\n"
+                + "    graph <" + LATINDEX_CONTEXT + "> {\n"
+                + "		?j <http://www.ucuenca.edu.ec/ontology/tit_lim> ?tit .\n"
+                + "    }\n"
+                + "}";
+        RepositoryConnection connection = conn.getConnection();
+        connection.begin();
+        connection.prepareUpdate(QueryLanguage.SPARQL, q).execute();
+        connection.commit();
+        connection.close();
+    }
+
+    public void updateLatindexImg() throws RepositoryException, MalformedQueryException, QueryEvaluationException {
+        String q = "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n"
+                + "PREFIX dct: <http://purl.org/dc/terms/>\n"
+                + "PREFIX foaf: <http://xmlns.com/foaf/0.1/>\n"
+                + "select distinct ?j ?f {\n"
+                + "	graph <" + PUB_CONTEXT + "> {\n"
+                + "      	?j <http://ucuenca.edu.ec/ontology#index> <http://ucuenca.edu.ec/ontology#Latindex> .\n"
+                + "    }\n"
+                + "    graph <" + LATINDEX_CONTEXT + "> {\n"
+                + "      	?j <http://www.ucuenca.edu.ec/ontology/folio> ?f  .\n"
+                + "    }\n"
+                + "}";
+        List<Map<String, Value>> query = query(q);
+
+        for (Map<String, Value> mo : query) {
+            log.info("Checking journal {} of {}", query.indexOf(mo), query.size());
+            String j = mo.get("j").stringValue();
+            String f = mo.get("f").stringValue();
+            String ping = "http://www.latindex.org/lat/portadas/fotRev/" + f + ".jpg";
+            if (HTTPUtils.pingURL(ping, 10 * 1000)) {
+                addSt(j, "http://xmlns.com/foaf/0.1/img", ping, PUB_CONTEXT);
+                log.info("Image {} found for journal {}", ping, j);
+            }
+        }
+    }
+
+    public boolean isValidURI(String uri) throws RepositoryException {
+        boolean t = false;
+        try {
+            new java.net.URI(uri);
+            t = true;
+        } catch (Exception e) {
+            log.info("Invalid URI {} ignoring", uri);
+        }
+        return t;
+    }
 }
