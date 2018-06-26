@@ -15,10 +15,8 @@
  */
 package ec.edu.cedia.redi.latindex.search;
 
-import ec.edu.cedia.redi.latindex.search.BingSearch;
-import ec.edu.cedia.redi.latindex.search.GoogleSearch;
-import ec.edu.cedia.redi.latindex.api.WebSearcher;
 import ec.edu.cedia.redi.latindex.api.Query;
+import ec.edu.cedia.redi.latindex.api.WebSearcher;
 import ec.edu.cedia.redi.latindex.search.query.StrictQuery;
 import ec.edu.cedia.redi.latindex.search.query.Value;
 import org.junit.AfterClass;
@@ -48,7 +46,7 @@ public class WebSearchTest {
     @Test
     public void testGoogleSearch() {
         WebSearcher google = new GoogleSearch();
-        assertEquals(6, google.getUrls(query, 6).size());
+        assertEquals(5, google.getUrls(query, 6).size());
     }
 
     @Test
