@@ -41,10 +41,11 @@ import org.openrdf.rio.UnsupportedRDFormatException;
 import org.slf4j.LoggerFactory;
 
 /**
- * Retrieve Scopus` new CiteScore metrics, as well as Source Normalized Impact
+ * Retrieve Scopus' new CiteScore metrics, as well as Source Normalized Impact
  * per Paper (SNIP) and SCImago Journal Rank (SJR) metrics and other percentages
  * of certain metadata
  *
+ * @see https://dev.elsevier.com/journal_metrics.html
  * @author Xavier Sumba <xavier.sumba93@ucuenca.ec>
  */
 public class JournalMetrics {
@@ -53,6 +54,7 @@ public class JournalMetrics {
 
     private final String TITLE = "https://api.elsevier.com/content/serial/title";
     private final String ISSN = "https://api.elsevier.com/content/serial/title/issn/%s";
+    private final String ISBN = "https://api.elsevier.com/content/nonserial/title/isbn/%s";
     private final String API_KEY = "a3b64e9d82a8f7b14967b9b9ce8d513d";
 
     /**
@@ -61,7 +63,7 @@ public class JournalMetrics {
      * @param issn
      * @return
      * @throws org.apache.commons.httpclient.HttpException
-     * @see https://dev.elsevier.com/journal_metrics.html
+     * @see https://dev.elsevier.com/documentation/SerialTitleAPI.wadl
      */
     public Model getJournal(String issn) throws HttpException {
         HttpMethod get = new GetMethod(String.format(ISSN, issn));
@@ -93,6 +95,60 @@ public class JournalMetrics {
         }
     }
 
+    /**
+     * Get a {@link Model} from the Journal Metrics API for a given ISBN.
+     *
+     * @param isbn
+     * @throws org.apache.commons.httpclient.HttpException
+     * @see https://dev.elsevier.com/documentation/NonSerialTitleAPI.wadl
+     * @return
+     */
+    public Model getBook(String isbn) throws HttpException {
+        HttpMethod get = new GetMethod(String.format(ISBN, isbn));
+        get.setRequestHeader("X-ELS-APIKey", API_KEY);
+
+        int status = HTTPCaller.get(get);
+        switch (status) {
+            case 200:
+                try {
+                    return getModel(get.getResponseBodyAsStream());
+                } catch (IOException ex) {
+                    throw new RuntimeException(ex);
+                } finally {
+                    get.releaseConnection();
+                }
+            case 404:
+                return new LinkedHashModel();
+            default:
+                throw new HttpException(String.format("Cannot extract "
+                        + "book information for url \n%s. "
+                        + "\nStatus code: %s "
+                        + "\nISSN:%s", get.getPath(), status, isbn));
+        }
+    }
+
+    /**
+     * Return the URL, if present, for the image cover of a book.
+     *
+     * @param issn
+     * @return
+     * @throws HttpException
+     */
+    public Optional<String> getJournalImage(String issn) throws HttpException {
+        return getImage(String.format(ISSN, issn));
+    }
+
+    /**
+     * Return the URL, if present, for the image cover of a book.
+     *
+     * @param isbn
+     * @return
+     * @throws HttpException
+     */
+    public Optional<String> getBookImage(String isbn) throws HttpException {
+        return getImage(String.format(ISBN, isbn));
+    }
+
     private Model getModel(InputStream in) {
         try {
             Object jsonObject = JsonUtils.fromInputStream(in);
@@ -109,15 +165,8 @@ public class JournalMetrics {
         }
     }
 
-    /**
-     * Return the URL, if present, for the image cover of a journal.
-     *
-     * @param issn
-     * @return
-     * @throws HttpException
-     */
-    public Optional<String> getImage(String issn) throws HttpException {
-        HttpMethod get = new GetMethod(String.format(ISSN, issn));
+    private Optional<String> getImage(String url) throws HttpException {
+        HttpMethod get = new GetMethod(url);
         NameValuePair[] params = {
             new NameValuePair("view", "COVERIMAGE"), //
         };
@@ -132,9 +181,9 @@ public class JournalMetrics {
                 return Optional.empty();
             default:
                 throw new HttpException(String.format("Cannot extract "
-                        + "image of journal \n%s. "
+                        + "image \n"
                         + "\nStatus code: %s "
-                        + "\nISSN:%s", get.getPath(), status, issn));
+                        + "\nURL:%s", status, url));
         }
     }
 }

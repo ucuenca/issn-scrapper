@@ -44,10 +44,23 @@ public class JournalMetricsTest {
     }
 
     @Test
-    public void testJournalImage() throws HttpException {
-        Optional<String> img = metrics.getImage("0378-1119");
+    public void testBookInfo() throws HttpException {
+        Model rdf = metrics.getBook("978-1-898563-14-3");
+        Assert.assertEquals(29, rdf.size());
+        rdf = metrics.getJournal("978-1-898563-14-2");
+        Assert.assertEquals(0, rdf.size());
+    }
+
+    @Test
+    public void testImage() throws HttpException {
+        Optional<String> img = metrics.getJournalImage("0378-1119");
         Assert.assertTrue(img.get().length() > 0);
-        img = metrics.getImage("1468-4322");
+        img = metrics.getJournalImage("1468-4322");
+        Assert.assertFalse(img.isPresent());
+
+        img = metrics.getBookImage("978-1-898563-14-3");
+        Assert.assertTrue(img.get().length() > 0);
+        img = metrics.getBookImage("978-1-898563-14-2");
         Assert.assertFalse(img.isPresent());
     }
 
