@@ -168,7 +168,7 @@ public class JournalMetrics {
     private Optional<String> getImage(String url) throws HttpException {
         HttpMethod get = new GetMethod(url);
         NameValuePair[] params = {
-            new NameValuePair("view", "COVERIMAGE"), //
+            new NameValuePair("view", "coverimage "), //
         };
         get.setQueryString(params);
         get.setRequestHeader("Accept", "image/gif");

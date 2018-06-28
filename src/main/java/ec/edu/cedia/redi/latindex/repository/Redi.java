@@ -22,9 +22,13 @@ import ec.edu.cedia.redi.latindex.utils.HTTPUtils;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import org.openrdf.model.BNode;
+import org.openrdf.model.Model;
 import org.openrdf.model.Statement;
 import org.openrdf.model.URI;
 import org.openrdf.model.Value;
@@ -59,11 +63,24 @@ public class Redi {
     public static final String POTENTIAL_ISSN_CONTEXT = "https://redi.cedia.edu.ec/context/latindexPotentialIssn";
     public static final String AUGMENT_ISSN_INFO_CONTEXT = "https://redi.cedia.edu.ec/context/latindexAugmentInfo";
     public static final String ROAD_ISSN_CONTEXT = "https://redi.cedia.edu.ec/context/roadissn";
-
+    public static final String ELSEVIER_CONTEXT = "https://redi.cedia.edu.ec/context/elsevier";
     public static final String UC_PREFIX = "http://www.ucuenca.edu.ec/ontology/";
 
     public Redi(RediRepository conn) {
         this.conn = conn;
+    }
+
+    public void addStBN(String s, String p, String o, String c) throws RepositoryException {
+        RepositoryConnection connection = this.conn.getConnection();
+        connection.begin();
+        URI su = vf.createURI(s);
+        URI pu = vf.createURI(p);
+        URI ou = vf.createURI("_:", o);
+        URI cu = vf.createURI(c);
+        connection.add(su, pu, ou, cu);
+        connection.commit();
+        connection.close();
+
     }
 
     public void addSt(String s, String p, String o, String c) throws RepositoryException {
@@ -500,11 +517,7 @@ public class Redi {
                 + "      	filter not exists { ?j <http://ucuenca.edu.ec/ontology#index> <http://ucuenca.edu.ec/ontology#Latindex> . }\n"
                 + "    }\n"
                 + "}";
-        RepositoryConnection connection = conn.getConnection();
-        connection.begin();
-        connection.prepareUpdate(QueryLanguage.SPARQL, q).execute();
-        connection.commit();
-        connection.close();
+        update(q);
     }
 
     public void updateLatindex() throws RepositoryException, MalformedQueryException, UpdateExecutionException {
@@ -529,11 +542,7 @@ public class Redi {
                 + "		?j <http://www.ucuenca.edu.ec/ontology/tit_lim> ?tit .\n"
                 + "    }\n"
                 + "}";
-        RepositoryConnection connection = conn.getConnection();
-        connection.begin();
-        connection.prepareUpdate(QueryLanguage.SPARQL, q).execute();
-        connection.commit();
-        connection.close();
+        update(q);
     }
 
     public void updateLatindexImg() throws RepositoryException, MalformedQueryException, QueryEvaluationException {
@@ -572,4 +581,308 @@ public class Redi {
         }
         return t;
     }
+
+    public Set<String> getISSNSet() throws RepositoryException, MalformedQueryException, QueryEvaluationException {
+        String q = "select distinct ?p {\n"
+                + " graph <" + PUB_CONTEXT + "> {\n"
+                + "     [] <http://purl.org/ontology/bibo/issn> ?p .\n"
+                + " }\n"
+                + "}";
+        List<Map<String, Value>> query = query(q);
+        Set<String> hs = new HashSet<>();
+        for (Map<String, Value> mp : query) {
+            String issn = mp.get("p").stringValue();
+            issn = issn.replaceAll("-", "").toLowerCase().trim();
+            while (issn.length() < 8) {
+                issn = "0" + issn;
+            }
+            hs.add(issn);
+        }
+        return hs;
+    }
+
+    public Set<String> getISBNSet() throws RepositoryException, MalformedQueryException, QueryEvaluationException {
+        String q = "select distinct ?p {\n"
+                + " graph <" + PUB_CONTEXT + "> {\n"
+                + "     [] <http://purl.org/ontology/bibo/isbn> ?p .\n"
+                + " }\n"
+                + "}";
+        List<Map<String, Value>> query = query(q);
+        Set<String> hs = new HashSet<>();
+        for (Map<String, Value> mp : query) {
+            String issn = mp.get("p").stringValue();
+            issn = issn.replaceAll("-", "").toLowerCase().trim();
+            hs.add(issn);
+        }
+        return hs;
+    }
+
+    public void addModel(String context, Model m) throws RepositoryException {
+        RepositoryConnection connection = this.conn.getConnection();
+        URI contextUri = connection.getValueFactory().createURI(context);
+        connection.begin();
+        connection.add(m, contextUri);
+        connection.commit();
+        connection.close();
+    }
+
+    public List<Map.Entry<String, String>> getISSNPubSet() throws RepositoryException, MalformedQueryException, QueryEvaluationException {
+        String q = "select distinct ?p ?i  {\n"
+                + " graph <" + PUB_CONTEXT + "> {\n"
+                + "     ?p <http://purl.org/ontology/bibo/issn> ?n .\n"
+                + "     bind(lcase(str(?n)) as ?i) .\n"
+                + " }\n"
+                + "}";
+        List<Map<String, Value>> query = query(q);
+        List<Map.Entry<String, String>> hs = new ArrayList<>();
+        for (Map<String, Value> mp : query) {
+            String pub = mp.get("p").stringValue();
+            String issn = mp.get("i").stringValue();
+            issn = issn.replaceAll("-", "").toLowerCase().trim();
+            while (issn.length() < 8) {
+                issn = "0" + issn;
+            }
+            issn = issn.substring(0, 4) + "-" + issn.substring(4, issn.length());
+            hs.add(new AbstractMap.SimpleEntry<>(pub, issn.toLowerCase()));
+        }
+        return hs;
+    }
+
+    public Set<String> getISSNElsevier(String issn) throws RepositoryException, MalformedQueryException, QueryEvaluationException {
+        String q = "select distinct ?u {\n"
+                + "	graph <" + ELSEVIER_CONTEXT + "> {\n"
+                + "      ?a <prism:eIssn>|<prism:issn> ?i .\n"
+                + "      ?a <prism:url> ?u .\n"
+                + "      filter (lcase(str(?i)) ='" + issn + "') .\n"
+                + "    }\n"
+                + "}";
+        List<Map<String, Value>> query = query(q);
+        Set<String> hs = new HashSet<>();
+        for (Map<String, Value> mp : query) {
+            String stringValue = mp.get("u").stringValue();
+            hs.add(stringValue);
+        }
+        return hs;
+    }
+
+    public void transformElsevierURL() throws RepositoryException, MalformedQueryException, UpdateExecutionException {
+        String q = "delete {\n"
+                + "    graph <" + ELSEVIER_CONTEXT + "> {\n"
+                + "      ?un <prism:url> ?u .\n"
+                + "    }\n"
+                + "} insert {\n"
+                + "    graph <" + ELSEVIER_CONTEXT + "> {\n"
+                + "      ?un <prism:url> ?ur .\n"
+                + "    }\n"
+                + "} where {\n"
+                + "	graph <" + ELSEVIER_CONTEXT + "> {\n"
+                + "		?un <prism:url> ?u .\n"
+                + "      	bind (iri(?u) as ?ur) .\n"
+                + "      	filter (isLiteral(?u)) .\n"
+                + "	}\n"
+                + "} ";
+        String q1 = "delete {\n"
+                + "    graph <" + ELSEVIER_CONTEXT + "> {\n"
+                + "      ?un <prism:url> ?u .\n"
+                + "    }\n"
+                + "} insert {\n"
+                + "    graph <" + ELSEVIER_CONTEXT + "> {\n"
+                + "      ?un <http://purl.org/dc/elements/1.1/@href> ?ur .\n"
+                + "    }\n"
+                + "} where {\n"
+                + "	graph <" + ELSEVIER_CONTEXT + "> {\n"
+                + "		?un <http://purl.org/dc/elements/1.1/@href> ?u .\n"
+                + "      	bind (iri(?u) as ?ur) .\n"
+                + "      	filter (isLiteral(?u)) .\n"
+                + "	}\n"
+                + "} ";
+        String q2 = "insert {\n"
+                + "    graph <" + ELSEVIER_CONTEXT + "> {\n"
+                + "      ?un <http://xmlns.com/foaf/0.1/img2> ?i .\n"
+                + "    }\n"
+                + "} where {\n"
+                + "	graph <" + ELSEVIER_CONTEXT + "> {\n"
+                + "		[] <http://xmlns.com/foaf/0.1/img> ?i .\n"
+                + "		?un <http://purl.org/dc/elements/1.1/link> ?l .\n"
+                + "		?l <http://purl.org/dc/elements/1.1/@href> ?i .\n"
+                + "	}\n"
+                + "} ";
+        update(q);
+        update(q1);
+        update(q2);
+    }
+
+    public void update(String q) throws RepositoryException, MalformedQueryException, UpdateExecutionException {
+        RepositoryConnection connection = conn.getConnection();
+        connection.begin();
+        connection.prepareUpdate(QueryLanguage.SPARQL, q).execute();
+        connection.commit();
+        connection.close();
+    }
+
+    public String getListJournalsElsevierQuery(boolean issn, boolean onlyJournal) {
+        String q = "select distinct ?j {\n"
+                + "    graph <" + ELSEVIER_CONTEXT + "> {\n"
+                + "      ?un <prism:url> ?j .\n";
+        if (issn) {
+            q += "      ?un <prism:issn>|<prism:eIssn> [] .\n"
+                    + "      values ?s {'journal'^^<http://www.w3.org/2001/XMLSchema#string>}   "
+                    + "      filter " + (onlyJournal ? "" : " not ") + " exists{\n"
+                    + "      	?un <prism:aggregationType> ?s .	\n"
+                    + "      }\n";
+        } else {
+            q += "      ?un <prism:isbn> [] .\n";
+        }
+        q += "	}\n"
+                + "} ";
+
+        return q;
+    }
+
+    public String getUpdateElsevierQuery(String stringValue, String type) {
+        String q2 = "PREFIX dct: <http://purl.org/dc/terms/>\n"
+                + "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n"
+                + "PREFIX foaf: <http://xmlns.com/foaf/0.1/>\n"
+                + "insert  {\n"
+                + "  graph <" + ELSEVIER_CONTEXT + "Test> {\n"
+                + "	?is a ?ty .\n"
+                + "	?is rdfs:label ?n .\n"
+                + "  	?is foaf:img ?i .\n"
+                + "  	?is <http://ucuenca.edu.ec/ontology#index>  <http://ucuenca.edu.ec/ontology#ScopusProvider> .\n"
+                + "  	?is <http://ucuenca.edu.ec/ontology#edition> ?ed .\n"
+                + "  	?is <http://ucuenca.edu.ec/ontology#subject-area> ?sal .\n"
+                + "  	?is <http://ucuenca.edu.ec/ontology#SJR> ?SJR .\n"
+                + "  	?is <http://ucuenca.edu.ec/ontology#SNIP> ?SNIP .\n"
+                + "  	?pub1uri a foaf:Organization .\n"
+                + "  	?pub1uri foaf:name ?pub1 .\n"
+                + "  	?pub2uri a foaf:Organization .\n"
+                + "  	?pub2uri foaf:name ?pub2 .\n"
+                + "  	?is dct:publisher ?pub2uri .\n"
+                + "  	?is dct:publisher ?pub1uri .\n"
+                + "  	?is <http://purl.org/ontology/bibo/issn> ?issn .\n"
+                + "  	?is <http://purl.org/ontology/bibo/issn> ?issn2 .\n"
+                + "  	?is <http://purl.org/ontology/bibo/isbn> ?isbn .\n"
+                + "  	?is <http://purl.org/ontology/bibo/uri> ?ss .\n"
+                + "  	?is <http://purl.org/ontology/bibo/uri> ?hm .\n"
+                + "  	?is <http://purl.org/ontology/bibo/uri> ?hm2 .\n"
+                + "    }\n"
+                + "} where {\n"
+                + "  	\n"
+                + "  	values ?ty {<http://purl.org/ontology/bibo/" + type + ">}\n"
+                + "    values ?is {<" + stringValue + ">} .\n"
+                + "	graph <" + ELSEVIER_CONTEXT + "> {\n"
+                + "      	?un <prism:url> ?is.\n"
+                + "      	?un <dc:title> ?n .\n"
+                + "       	optional {\n"
+                + "        	?un foaf:img2 ?i .\n"
+                + "        }\n"
+                + "      	optional {\n"
+                + "        	?un <http://purl.org/dc/elements/1.1/subject-area> ?sa .\n"
+                + "          	?sa <http://purl.org/dc/elements/1.1/$> ?sal .\n"
+                + "        }\n"
+                + "        optional {\n"
+                + "        	?un <http://purl.org/dc/elements/1.1/SJRList> ?jl .\n"
+                + "            ?jl <http://purl.org/dc/elements/1.1/SJR> ?so .\n"
+                + "          	?so <http://purl.org/dc/elements/1.1/$> ?SJR .\n"
+                + "        }\n"
+                + "      	optional {\n"
+                + "        	?un <http://purl.org/dc/elements/1.1/SNIPList> ?jl1 .\n"
+                + "            ?jl1 <http://purl.org/dc/elements/1.1/SNIP> ?so1 .\n"
+                + "          	?so1 <http://purl.org/dc/elements/1.1/$> ?SNIP .\n"
+                + "        }\n"
+                + "      	optional {\n"
+                + "        	?un <dc:publisher> ?pub1 .\n"
+                + "          	filter (isLiteral(?pub1)) .\n"
+                + "          	bind(encode_for_uri(str(?pub1)) as ?pub1h) .\n"
+                + "          	bind (iri(concat('https://redi.cedia.edu.ec/resource/publisher/',?pub1h)) as ?pub1uri) .\n"
+                + "        }\n"
+                + "      	optional {\n"
+                + "        	?un <dc:publisher> ?pub2o .\n"
+                + "          	?pub2o <http://purl.org/dc/elements/1.1/$> ?pub2 .\n"
+                + "          	bind(encode_for_uri(str(?pub2)) as ?pub2h) .\n"
+                + "          	bind (iri(concat('https://redi.cedia.edu.ec/resource/publisher/',?pub2h)) as ?pub2uri) .\n"
+                + "        }\n"
+                + "      	optional {\n"
+                + "        	?un <prism:eIssn> ?issn .\n"
+                + "        }\n"
+                + "      	optional {\n"
+                + "        	?un <prism:issn> ?issn2 .\n"
+                + "        }\n"
+                + "      	optional {\n"
+                + "        	?un <prism:isbn> ?isbn .\n"
+                + "        }\n"
+                + "      	optional {\n"
+                + "        	?un <prism:edition> ?ed .\n"
+                + "        }\n"
+                + "      	optional {\n"
+                + "        	?un <http://purl.org/dc/elements/1.1/link> ?sso .\n"
+                + "          	?sso <http://purl.org/dc/elements/1.1/@ref> 'scopus-source'^^<http://www.w3.org/2001/XMLSchema#string> .\n"
+                + "          	?sso <http://purl.org/dc/elements/1.1/@href> ?ss .\n"
+                + "        }\n"
+                + "      	optional {\n"
+                + "        	?un <http://purl.org/dc/elements/1.1/link> ?sso1 .\n"
+                + "          	?sso1 <http://purl.org/dc/elements/1.1/@ref> 'homepage'^^<http://www.w3.org/2001/XMLSchema#string> .\n"
+                + "          	?sso1 <http://purl.org/dc/elements/1.1/@href> ?hm .\n"
+                + "        }\n"
+                + "      	optional {\n"
+                + "        	?un <http://purl.org/dc/elements/1.1/link> ?sso12 .\n"
+                + "          	?sso12 <http://purl.org/dc/elements/1.1/@rel> 'homepage'^^<http://www.w3.org/2001/XMLSchema#string> .\n"
+                + "          	?sso12 <http://purl.org/dc/elements/1.1/@href> ?hm2 .\n"
+                + "        }\n"
+                + "	}\n"
+                + "}";
+        return q2;
+    }
+
+    public void mergeElsevierJournals() throws RepositoryException, MalformedQueryException, UpdateExecutionException, QueryEvaluationException {
+        String q = getListJournalsElsevierQuery(true, true);
+        List<Map<String, Value>> query = query(q);
+        log.info("Loading Journals...");
+        int i = 0;
+        for (Map<String, Value> d : query) {
+            String stringValue = d.get("j").stringValue();
+            log.info("{} / {} URI = {}", i, query.size(), stringValue);
+            String q2 = getUpdateElsevierQuery(stringValue, "Journal");
+            update(q2);
+            i++;
+        }
+        q = getListJournalsElsevierQuery(true, false);
+        query = query(q);
+        log.info("Loading Proceedingss...");
+        i = 0;
+        for (Map<String, Value> d : query) {
+            String stringValue = d.get("j").stringValue();
+            log.info("{} / {} URI = {}", i, query.size(), stringValue);
+            String q2 = getUpdateElsevierQuery(stringValue, "Proceedings");
+            update(q2);
+            i++;
+        }
+        q = getListJournalsElsevierQuery(false, false/*mock*/);
+        query = query(q);
+        log.info("Loading Books...");
+        i = 0;
+        for (Map<String, Value> d : query) {
+            String stringValue = d.get("j").stringValue();
+            log.info("{} / {} URI = {}", i, query.size(), stringValue);
+            String q2 = getUpdateElsevierQuery(stringValue, "Book");
+            update(q2);
+            i++;
+        }
+    }
+
+    public void linkElsevierJournals() throws RepositoryException, MalformedQueryException, UpdateExecutionException {
+        String q = "PREFIX dct: <http://purl.org/dc/terms/>\n"
+                + "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n"
+                + "insert {\n"
+                + "	graph <" + ELSEVIER_CONTEXT + "Test> {\n"
+                + "    	?a dct:isPartOf ?c .\n"
+                + "    }\n"
+                + "} where {\n"
+                + "	graph <" + ELSEVIER_CONTEXT + "SameAs> {\n"
+                + "  		?a rdfs:seeAlso ?c .\n"
+                + "    }\n"
+                + "} ";
+        update(q);
+    }
+
 }
