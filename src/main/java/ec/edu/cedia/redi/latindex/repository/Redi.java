@@ -727,11 +727,14 @@ public class Redi {
         if (issn) {
             q += "      ?un <prism:issn>|<prism:eIssn> [] .\n"
                     + "      values ?s {'journal'^^<http://www.w3.org/2001/XMLSchema#string>}   "
-                    + "      filter " + (onlyJournal ? "" : " not ") + " exists{\n"
+                    + "      filter" + (onlyJournal ? " " : " not ") + "exists{\n"
                     + "      	?un <prism:aggregationType> ?s .	\n"
                     + "      }\n";
         } else {
-            q += "      ?un <prism:isbn> [] .\n";
+            q = "select ?j {\n"
+                    + "    graph <" + ELSEVIER_CONTEXT + "> {\n"
+                    + "      ?un <prism:isbn> [] .\n"
+                    + "      ?un <prism:url> ?j .\n";
         }
         q += "	}\n"
                 + "} ";
