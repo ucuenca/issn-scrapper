@@ -617,6 +617,23 @@ public class Redi {
         return hs;
     }
 
+    public List<Map.Entry<String, String>> getISBNPubSet() throws RepositoryException, MalformedQueryException, QueryEvaluationException {
+        String q = "select distinct ?p ?i  {\n"
+                + " graph <" + PUB_CONTEXT + "> {\n"
+                + "     ?p <http://purl.org/ontology/bibo/isbn> ?n .\n"
+                + "     bind(lcase(str(?n)) as ?i) .\n"
+                + " }\n"
+                + "}";
+        List<Map<String, Value>> query = query(q);
+        List<Map.Entry<String, String>> hs = new ArrayList<>();
+        for (Map<String, Value> mp : query) {
+            String pub = mp.get("p").stringValue();
+            String issn = mp.get("i").stringValue();
+            hs.add(new AbstractMap.SimpleEntry<>(pub, issn));
+        }
+        return hs;
+    }
+
     public void addModel(String context, Model m) throws RepositoryException {
         RepositoryConnection connection = this.conn.getConnection();
         URI contextUri = connection.getValueFactory().createURI(context);
@@ -648,12 +665,13 @@ public class Redi {
         return hs;
     }
 
-    public Set<String> getISSNElsevier(String issn) throws RepositoryException, MalformedQueryException, QueryEvaluationException {
+    public Set<String> getISSNorISBNElsevier(String issnOrIsbn) throws RepositoryException, MalformedQueryException, QueryEvaluationException {
         String q = "select distinct ?u {\n"
                 + "	graph <" + ELSEVIER_CONTEXT + "> {\n"
-                + "      ?a <prism:eIssn>|<prism:issn> ?i .\n"
+                + "      values ?p {<prism:eIssn> <prism:issn> <prism:isbn>} ."
+                + "      ?a ?p ?i .\n"
                 + "      ?a <prism:url> ?u .\n"
-                + "      filter (lcase(str(?i)) ='" + issn + "') .\n"
+                + "      filter (lcase(str(?i)) ='" + issnOrIsbn + "') .\n"
                 + "    }\n"
                 + "}";
         List<Map<String, Value>> query = query(q);

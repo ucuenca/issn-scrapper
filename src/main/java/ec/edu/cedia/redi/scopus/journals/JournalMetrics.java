@@ -177,13 +177,13 @@ public class JournalMetrics {
         switch (status) {
             case 200:
                 return Optional.of(get.getURI().toString());
-            case 404:
-                return Optional.empty();
             default:
-                throw new HttpException(String.format("Cannot extract "
-                        + "image \n"
-                        + "\nStatus code: %s "
-                        + "\nURL:%s", status, url));
+                return Optional.empty();
+            //default:
+//                throw new HttpException(String.format("Cannot extract "
+//                        + "image \n"
+//                        + "\nStatus code: %s "
+//                        + "\nURL:%s", status, url));
         }
     }
 }

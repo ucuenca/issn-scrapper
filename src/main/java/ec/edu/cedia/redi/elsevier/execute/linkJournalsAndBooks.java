@@ -18,9 +18,9 @@ import org.slf4j.LoggerFactory;
  *
  * @author cedia
  */
-public class linkJournals {
+public class linkJournalsAndBooks {
 
-    private static final Logger log = LoggerFactory.getLogger(linkJournals.class);
+    private static final Logger log = LoggerFactory.getLogger(linkJournalsAndBooks.class);
 
     /**
      *
@@ -33,8 +33,18 @@ public class linkJournals {
             int ix = 0;
             for (Map.Entry<String, String> en : issnPubSet) {
                 log.info("Processing : {} / {} ISSN: {}", ix, issnPubSet.size(), en.getKey());
-                Set<String> issnElsevier = redi.getISSNElsevier(en.getValue());
+                Set<String> issnElsevier = redi.getISSNorISBNElsevier(en.getValue());
                 for (String i : issnElsevier) {
+                    redi.addSt(en.getKey(), "http://www.w3.org/2000/01/rdf-schema#seeAlso", i, Redi.ELSEVIER_CONTEXT + "SameAs");
+                }
+                ix++;
+            }
+            List<Map.Entry<String, String>> isbnPubSet = redi.getISBNPubSet();
+            ix = 0;
+            for (Map.Entry<String, String> en : isbnPubSet) {
+                log.info("Processing : {} / {} ISBN: {}", ix, isbnPubSet.size(), en.getKey());
+                Set<String> isbnElsevier = redi.getISSNorISBNElsevier(en.getValue());
+                for (String i : isbnElsevier) {
                     redi.addSt(en.getKey(), "http://www.w3.org/2000/01/rdf-schema#seeAlso", i, Redi.ELSEVIER_CONTEXT + "SameAs");
                 }
                 ix++;
