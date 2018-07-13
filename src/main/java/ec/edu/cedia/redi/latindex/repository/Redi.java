@@ -549,8 +549,6 @@ public class Redi {
                 + "insert {\n"
                 + "	graph <" + PUB_CONTEXT + "> {\n"
                 + "  		?j bibo:issn ?issn .\n"
-                                + "  	?pub1uri a foaf:Organization .\n"
-                + "  	?pub1uri foaf:name ?pub1 .\n"
                 + "    }\n"
                 + "}where {\n"
                 + "    graph <" + LATINDEX_CONTEXT + "SameAsJournals> {\n"
