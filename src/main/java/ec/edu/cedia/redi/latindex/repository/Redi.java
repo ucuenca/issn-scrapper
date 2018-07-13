@@ -543,6 +543,60 @@ public class Redi {
                 + "    }\n"
                 + "}";
         update(q);
+        q = "PREFIX dct: <http://purl.org/dc/terms/>\n"
+                + "PREFIX foaf: <http://xmlns.com/foaf/0.1/>\n"
+                + "PREFIX bibo: <http://purl.org/ontology/bibo/>\n"
+                + "insert {\n"
+                + "	graph <" + PUB_CONTEXT + "> {\n"
+                + "  		?j bibo:issn ?issn .\n"
+                                + "  	?pub1uri a foaf:Organization .\n"
+                + "  	?pub1uri foaf:name ?pub1 .\n"
+                + "    }\n"
+                + "}where {\n"
+                + "    graph <" + LATINDEX_CONTEXT + "SameAsJournals> {\n"
+                + "		?p <http://www.w3.org/2000/01/rdf-schema#seeAlso> ?j .\n"
+                + "    }\n"
+                + "    graph <" + LATINDEX_CONTEXT + "> {\n"
+                + "		?j <http://www.ucuenca.edu.ec/ontology/issn> ?issn .\n"
+                + "    }\n"
+                + "}";
+        update(q);
+        q = "PREFIX dct: <http://purl.org/dc/terms/>\n"
+                + "PREFIX foaf: <http://xmlns.com/foaf/0.1/>\n"
+                + "PREFIX bibo: <http://purl.org/ontology/bibo/>\n"
+                + "insert {\n"
+                + "	graph <" + PUB_CONTEXT + "> {\n"
+                + "  		?j <http://ucuenca.edu.ec/ontology#subject-area> ?sa .\n"
+                + "    }\n"
+                + "}where {\n"
+                + "    graph <" + LATINDEX_CONTEXT + "SameAsJournals> {\n"
+                + "		?p <http://www.w3.org/2000/01/rdf-schema#seeAlso> ?j .\n"
+                + "    }\n"
+                + "    graph <" + LATINDEX_CONTEXT + "> {\n"
+                + "		?j <http://www.ucuenca.edu.ec/ontology/subtema> ?sa .\n"
+                + "    }\n"
+                + "}";
+        update(q);
+        q = "PREFIX dct: <http://purl.org/dc/terms/>\n"
+                + "PREFIX foaf: <http://xmlns.com/foaf/0.1/>\n"
+                + "PREFIX bibo: <http://purl.org/ontology/bibo/>\n"
+                + "insert {\n"
+                + "	graph <" + PUB_CONTEXT + "> {\n"
+                + "  		?j dct:publisher ?pub2uri .\n"
+                + "             ?pub2uri a foaf:Organization .\n"
+                + "             ?pub2uri foaf:name ?edi .\n"
+                + "    }\n"
+                + "}where {\n"
+                + "    graph <" + LATINDEX_CONTEXT + "SameAsJournals> {\n"
+                + "		?p <http://www.w3.org/2000/01/rdf-schema#seeAlso> ?j .\n"
+                + "    }\n"
+                + "    graph <" + LATINDEX_CONTEXT + "> {\n"
+                + "		?j <http://www.ucuenca.edu.ec/ontology/nombre_edi> ?edi .\n"
+                + "          	bind(encode_for_uri(str(?edi)) as ?pub2h) .\n"
+                + "          	bind (iri(concat('https://redi.cedia.edu.ec/resource/publisher/',?pub2h)) as ?pub2uri) .\n"
+                + "    }\n"
+                + "}";
+        update(q);
     }
 
     public void updateLatindexImg() throws RepositoryException, MalformedQueryException, QueryEvaluationException {
