@@ -974,6 +974,18 @@ public class Redi {
                 + "    }\n"
                 + "} ";
         update(q);
+        q = "PREFIX dct: <http://purl.org/dc/terms/>\n"
+                + "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n"
+                + "insert {\n"
+                + "	graph <" + ELSEVIER_CONTEXT + "Test> {\n"
+                + "    	?a ?b ?c .\n"
+                + "    }\n"
+                + "} where {\n"
+                + "	graph <" + SCIMAGOJR_CONTEXT + "> {\n"
+                + "  		?a ?b ?c .\n"
+                + "    }\n"
+                + "} ";
+        update(q);
     }
 
     public boolean ask(String q) throws RepositoryException, MalformedQueryException, QueryEvaluationException {
