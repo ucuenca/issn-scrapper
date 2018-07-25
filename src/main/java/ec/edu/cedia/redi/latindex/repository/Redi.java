@@ -64,6 +64,7 @@ public class Redi {
     public static final String AUGMENT_ISSN_INFO_CONTEXT = "https://redi.cedia.edu.ec/context/latindexAugmentInfo";
     public static final String ROAD_ISSN_CONTEXT = "https://redi.cedia.edu.ec/context/roadissn";
     public static final String ELSEVIER_CONTEXT = "https://redi.cedia.edu.ec/context/elsevier";
+    public static final String SCIMAGOJR_CONTEXT = "https://redi.cedia.edu.ec/context/scimagojr";
     public static final String UC_PREFIX = "http://www.ucuenca.edu.ec/ontology/";
 
     public Redi(RediRepository conn) {
@@ -956,6 +957,17 @@ public class Redi {
                 + "    }\n"
                 + "} ";
         update(q);
+    }
+
+    public boolean ask(String q) throws RepositoryException, MalformedQueryException, QueryEvaluationException {
+        boolean t = false;
+        RepositoryConnection connection = this.conn.getConnection();
+        connection.begin();
+        BooleanQuery prepareBooleanQuery = connection.prepareBooleanQuery(QueryLanguage.SPARQL, q);
+        t = prepareBooleanQuery.evaluate();
+        connection.commit();
+        connection.close();
+        return t;
     }
 
 }
