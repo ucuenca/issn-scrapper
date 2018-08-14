@@ -58,13 +58,14 @@ public class Redi {
     private final RediRepository conn;
     private final ValueFactory vf = ValueFactoryImpl.getInstance();
     private static final Logger log = LoggerFactory.getLogger(Redi.class);
-    public static final String PUB_CONTEXT = "https://redi.cedia.edu.ec/context/redi";
-    public static final String LATINDEX_CONTEXT = "https://redi.cedia.edu.ec/context/latindex";
-    public static final String POTENTIAL_ISSN_CONTEXT = "https://redi.cedia.edu.ec/context/latindexPotentialIssn";
-    public static final String AUGMENT_ISSN_INFO_CONTEXT = "https://redi.cedia.edu.ec/context/latindexAugmentInfo";
-    public static final String ROAD_ISSN_CONTEXT = "https://redi.cedia.edu.ec/context/roadissn";
-    public static final String ELSEVIER_CONTEXT = "https://redi.cedia.edu.ec/context/elsevier";
-    public static final String SCIMAGOJR_CONTEXT = "https://redi.cedia.edu.ec/context/scimagojr";
+    public static final String BASE_CONTEXT = "https://redi.cedia.edu.ec/kimuk/context/";
+    public static final String PUB_CONTEXT = BASE_CONTEXT + "redi";
+    public static final String LATINDEX_CONTEXT = BASE_CONTEXT + "latindex";
+    public static final String POTENTIAL_ISSN_CONTEXT = BASE_CONTEXT + "latindexPotentialIssn";
+    public static final String AUGMENT_ISSN_INFO_CONTEXT = BASE_CONTEXT + "latindexAugmentInfo";
+    public static final String ROAD_ISSN_CONTEXT = BASE_CONTEXT + "roadissn";
+    public static final String ELSEVIER_CONTEXT = BASE_CONTEXT + "elsevier";
+    public static final String SCIMAGOJR_CONTEXT = BASE_CONTEXT + "scimagojr";
     public static final String UC_PREFIX = "http://www.ucuenca.edu.ec/ontology/";
 
     public Redi(RediRepository conn) {

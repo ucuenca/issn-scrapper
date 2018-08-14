@@ -29,8 +29,6 @@ import org.openrdf.repository.Repository;
 import org.openrdf.repository.RepositoryConnection;
 import org.openrdf.repository.RepositoryException;
 import org.openrdf.repository.sail.SailRepository;
-import org.openrdf.rio.RDFFormat;
-import org.openrdf.rio.Rio;
 import org.openrdf.sail.memory.MemoryStore;
 import org.slf4j.LoggerFactory;
 

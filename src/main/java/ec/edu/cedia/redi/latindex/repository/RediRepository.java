@@ -27,11 +27,12 @@ import org.slf4j.LoggerFactory;
  *
  * @author Xavier Sumba <xavier.sumba93@ucuenca.ec>
  */
-public class RediRepository implements AutoCloseable{
-    public final static String ENDPOINT_REDI = "https://rediclon.cedia.edu.ec/sparql";
+public class RediRepository implements AutoCloseable {
+
+    public final static String ENDPOINT_REDI = "https://rediclon.cedia.edu.ec/kimuk/sparql";
     private final static String QUERY_ENDPOINT_REDI = ENDPOINT_REDI + "/select";
     private final static String UPDATE_ENDPOINT_REDI = ENDPOINT_REDI + "/update";
-    public final static String DEFAULT_CONTEXT = "https://redi.cedia.edu.ec/context/redi";
+    //public final static String DEFAULT_CONTEXT = "https://redi.cedia.edu.ec/context/redi";
     private static final Logger log = LoggerFactory.getLogger(RediRepository.class);
     private static final Map<String, String> headers = new HashMap<>();
     private SPARQLRepository repository;
@@ -39,7 +40,7 @@ public class RediRepository implements AutoCloseable{
     static {
         headers.put("Accept", "application/ld+json");
     }
-    
+
     private static RediRepository instance;
 
     private RediRepository() throws RepositoryException {
