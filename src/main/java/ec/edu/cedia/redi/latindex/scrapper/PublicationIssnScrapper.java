@@ -33,6 +33,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.zip.ZipException;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
 import org.jsoup.HttpStatusException;
@@ -123,10 +124,12 @@ public class PublicationIssnScrapper implements IssnScrapper {
             log.warn("{} for {}", ex.getMessage(), url);
         } catch (SSLException ex) {
             log.warn("Cannot extract ISSNs for url ({}) due to SSL errors.", url);
+        } catch (ZipException ex) {
+            log.warn("Cannot extract ISSNs for url ({}) due to ZIP errors.", url);
         } catch (IOException ex) {
-            if (ex.getMessage().contains("Too many redirects occurred trying to load URL")){
+            if (ex.getMessage().contains("Too many redirects occurred trying to load URL")) {
                 log.warn("Cannot extract ISSNs for url ({}) due to Too many redirects errors.", url);
-            }else{
+            } else {
                 throw new RuntimeException(ex);
             }
         }

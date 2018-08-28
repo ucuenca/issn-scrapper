@@ -541,7 +541,7 @@ public class Redi {
                 + "		?p <http://www.w3.org/2000/01/rdf-schema#seeAlso> ?j .\n"
                 + "    }\n"
                 + "    graph <" + LATINDEX_CONTEXT + "> {\n"
-                + "		?j <http://www.ucuenca.edu.ec/ontology/tit_lim> ?tit .\n"
+                + "		?j <http://www.ucuenca.edu.ec/ontology/tit_clave> ?tit .\n"
                 + "    }\n"
                 + "}";
         update(q);
