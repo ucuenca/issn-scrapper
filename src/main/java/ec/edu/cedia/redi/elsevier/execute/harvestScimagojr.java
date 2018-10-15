@@ -94,7 +94,7 @@ public class harvestScimagojr {
                 }
             }
 
-            Element first = get.select(".cellslide table tbody").first();
+            Element first = get.select(".cell2x1 .cellslide table tbody").first();
             first.children().forEach((t) -> {
                 BNode createBNode = instance.createBNode();
                 String text1 = t.child(0).text();
@@ -112,7 +112,26 @@ public class harvestScimagojr {
                 m2.add(createURI,
                         instance.createURI("http://ucuenca.edu.ec/ontology#Quartiles"),
                         createBNode);
+                m.addAll(m2);
             });
+            
+            Element first2 = get.select(".cell1x1 .cellslide table tbody").first();
+            first2.children().forEach((t) -> {
+                BNode createBNode = instance.createBNode();
+                String text1 = t.child(0).text();
+                String text2 = t.child(1).text();
+                m2.add(createBNode,
+                        instance.createURI("http://ucuenca.edu.ec/ontology#year"),
+                        instance.createLiteral(Integer.parseInt(text1)));
+                m2.add(createBNode,
+                        instance.createURI("http://ucuenca.edu.ec/ontology#SJR"),
+                        instance.createLiteral(Double.parseDouble(text2)));
+                m2.add(createURI,
+                        instance.createURI("http://ucuenca.edu.ec/ontology#SJRs"),
+                        createBNode);
+                m.addAll(m2);
+            });
+            
 
         } catch (Exception ex) {
             Logger.getLogger(harvestScimagojr.class.getName()).log(Level.SEVERE, null, ex);

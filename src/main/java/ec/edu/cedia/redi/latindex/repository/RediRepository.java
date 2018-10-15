@@ -29,7 +29,7 @@ import org.slf4j.LoggerFactory;
  */
 public class RediRepository implements AutoCloseable {
 
-    public final static String ENDPOINT_REDI = "https://rediclon.cedia.edu.ec/kimuk/sparql";
+    public final static String ENDPOINT_REDI = "https://rediclon.cedia.edu.ec/sparql";
     private final static String QUERY_ENDPOINT_REDI = ENDPOINT_REDI + "/select";
     private final static String UPDATE_ENDPOINT_REDI = ENDPOINT_REDI + "/update";
     //public final static String DEFAULT_CONTEXT = "https://redi.cedia.edu.ec/context/redi";

@@ -58,7 +58,7 @@ public class Redi {
     private final RediRepository conn;
     private final ValueFactory vf = ValueFactoryImpl.getInstance();
     private static final Logger log = LoggerFactory.getLogger(Redi.class);
-    public static final String BASE_CONTEXT = "https://redi.cedia.edu.ec/kimuk/context/";
+    public static final String BASE_CONTEXT = "https://redi.cedia.edu.ec/context/";
     public static final String PUB_CONTEXT = BASE_CONTEXT + "redi";
     public static final String LATINDEX_CONTEXT = BASE_CONTEXT + "latindex";
     public static final String POTENTIAL_ISSN_CONTEXT = BASE_CONTEXT + "latindexPotentialIssn";
