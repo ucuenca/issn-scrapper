@@ -23,6 +23,7 @@ import ec.edu.cedia.redi.latindex.utils.HTTPCaller;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -66,7 +67,7 @@ public class JournalMetrics {
      * @see https://dev.elsevier.com/documentation/SerialTitleAPI.wadl
      */
     public Model getJournal(String issn) throws HttpException {
-        HttpMethod get = new GetMethod(String.format(ISSN, issn));
+        HttpMethod get = new GetMethod(String.format(ISSN, URLEncoder.encode(issn)));
         NameValuePair[] params = {
             new NameValuePair("view", "ENHANCED"), //
         };
@@ -159,7 +160,7 @@ public class JournalMetrics {
             Object compact = JsonLdProcessor.compact(jsonObject, context, options);
             return Rio.parse(new ByteArrayInputStream(
                     JsonUtils.toString(compact).
-                    getBytes(StandardCharsets.UTF_8)), "http://example.com/", RDFFormat.JSONLD);
+                            getBytes(StandardCharsets.UTF_8)), "http://example.com/", RDFFormat.JSONLD);
         } catch (IOException | RDFParseException | UnsupportedRDFormatException | JsonLdError ex) {
             throw new RuntimeException(ex);
         }
@@ -168,7 +169,7 @@ public class JournalMetrics {
     private Optional<String> getImage(String url) throws HttpException {
         HttpMethod get = new GetMethod(url);
         NameValuePair[] params = {
-            new NameValuePair("view", "coverimage "), //
+            new NameValuePair("view", "coverimage"), //
         };
         get.setQueryString(params);
         get.setRequestHeader("Accept", "image/gif");

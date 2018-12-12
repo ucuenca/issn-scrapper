@@ -21,8 +21,8 @@ public class IntegrateLaindexREDI {
     public static void main(String[] args) throws RepositoryException, Exception {
         try (RediRepository r = RediRepository.getInstance()) {
             Redi redi = new Redi(r);
-            redi.updateOtherIndexes();
-            redi.updateLatindex();
+            //redi.updateOtherIndexes();
+            //redi.updateLatindex();
             redi.updateLatindexImg();
         }
     }

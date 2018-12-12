@@ -74,7 +74,7 @@ public class AugmentIssnLatindex {
 
     public void augmentIssn(String issn) throws RepositoryException, QueryEvaluationException {
         Issn latIssn = redi.getIssn(issn);
-        Issn roadIssn = redi.getRoadIssn(latIssn.getIssn());
+        Issn roadIssn = redi.getRoadIssn(issn);
         if (roadIssn != null) {
             redi.augmentIssn(latIssn, roadIssn);
         }

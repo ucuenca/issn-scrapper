@@ -138,6 +138,18 @@ public class Redi {
 
         try {
             RepositoryConnection connection = conn.getConnection();
+
+            String query_op = "PREFIX bibo: <http://purl.org/ontology/bibo/>\n"
+                    + "select distinct ?p { graph <" + Redi.PUB_CONTEXT + "> { ?p a bibo:AcademicArticle } } offset " + off + " limit 5";
+            List<Map<String, Value>> query2 = query(query_op);
+            String qp = "";
+            for (Map<String, Value> amv : query2) {
+                String stringValue = amv.get("p").stringValue();
+                if (isValidURI(stringValue)) {
+                    qp += " <" + stringValue + "> ";
+                }
+            }
+
             String query = "PREFIX dct: <http://purl.org/dc/terms/>\n"
                     + "PREFIX foaf: <http://xmlns.com/foaf/0.1/>\n"
                     + "PREFIX bibo: <http://purl.org/ontology/bibo/>\n"
@@ -147,13 +159,14 @@ public class Redi {
                     //+ "  }\n"
                     + "  GRAPH ?dataGraph {  \n"
                     //+ "    [] foaf:publications ?p .\n"
+                    + "    values ?p {" + qp + " } . \n"
                     + "    ?p dct:title ?t.\n"
                     + "    OPTIONAL { ?p bibo:abstract ?a. }\n"
                     + "    OPTIONAL { ?p bibo:issn ?i. }\n"
-                    + "    OPTIONAL { ?p dct:isPartOf ?j. }\n"
-                    + "    OPTIONAL { ?j rdfs:label ?jl. }\n"
+                    + "    OPTIONAL { ?p dct:isPartOf ?j. OPTIONAL { ?j rdfs:label ?jl. } }\n"
+                    + "    \n"
                     + "  }\n"
-                    + "} offset " + off + " limit 10";
+                    + "} ";
 
             TupleQuery q = connection.prepareTupleQuery(QueryLanguage.SPARQL, query);
             //q.setBinding("pubGraph", vf.createURI(PUB_CONTEXT));
@@ -444,7 +457,7 @@ public class Redi {
 
     public Map<String, Journal> getLatindexJournals() throws RepositoryException, MalformedQueryException, QueryEvaluationException {
         //Extracting Latindex journals
-        String q = "SELECT DISTINCT ?JOURNAL ?NAME ?TOPIC ?YEAR ?ISSN { "
+        String q = "SELECT ?JOURNAL ?NAME ?TOPIC ?YEAR ?ISSN { "
                 + " GRAPH <" + Redi.LATINDEX_CONTEXT + "> {   "
                 + "?JOURNAL a <http://www.ucuenca.edu.ec/ontology/journal> . "
                 + "?JOURNAL <http://www.ucuenca.edu.ec/ontology/tit_clave> ?NAME ."
@@ -796,9 +809,9 @@ public class Redi {
                 + "		?l <http://purl.org/dc/elements/1.1/@href> ?i .\n"
                 + "	}\n"
                 + "} ";
-        update(q);
-        update(q1);
-        update(q2);
+        //update(q);
+        //update(q1);
+        //update(q2);
     }
 
     public void update(String q) throws RepositoryException, MalformedQueryException, UpdateExecutionException {

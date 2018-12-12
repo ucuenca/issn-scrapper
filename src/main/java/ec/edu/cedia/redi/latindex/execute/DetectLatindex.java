@@ -105,13 +105,13 @@ public class DetectLatindex {
         } while (true);
     }
 
-    private static int last = 0;
+    private static int last = 29365;
 
     public static void main2(String[] args) throws RepositoryException, Exception {
         try (RediRepository r = RediRepository.getInstance()) {
             Redi redi = new Redi(r);
             Map<String, Journal> latindexJournals = redi.getLatindexJournals();
-            for (int i = last; i < 10000000; i += 10) {
+            for (int i = last; i < 10000000; i += 5) {
                 last = i;
                 List<Publication> publications = redi.getPublications(i);
 

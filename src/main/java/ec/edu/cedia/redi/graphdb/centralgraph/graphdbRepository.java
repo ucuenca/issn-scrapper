@@ -5,13 +5,36 @@
  */
 package ec.edu.cedia.redi.graphdb.centralgraph;
 
+import com.github.jsonldjava.utils.JsonUtils;
 import ec.edu.cedia.redi.latindex.utils.HTTPCaller;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.apache.commons.httpclient.NameValuePair;
 import org.apache.commons.httpclient.methods.PostMethod;
 import org.apache.commons.httpclient.methods.StringRequestEntity;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.openrdf.query.MalformedQueryException;
 import org.openrdf.query.QueryLanguage;
 import org.openrdf.query.UpdateExecutionException;
@@ -25,25 +48,87 @@ import org.openrdf.repository.sparql.SPARQLRepository;
  */
 public class graphdbRepository {
 
+    public static String TMP = "/tmp/";
     public static String GRAPHDB_SCHEMA = "data";
     public static String GRAPHDB_SERVER = "http://201.159.222.25:8180/";
     public static String GRAPHDB_INSTANCE = GRAPHDB_SERVER + "repositories/" + GRAPHDB_SCHEMA + "/statements";
     public static String GRAPHDB_IMPORT = GRAPHDB_SERVER + "rest/data/import/upload/" + GRAPHDB_SCHEMA + "/url";
-    public static String REDI_DOWNLOAD = "https://rediclon.cedia.edu.ec/carga/export/download?format=application%2Ftrix&context=";
+    public static String REDI_DOWNLOAD = "https://rediclon.cedia.edu.ec/export/download?format=application%2Ftrix&context=";
+    public static String REDI_DOWNLOAD_CONTEXTS = "https://rediclon.cedia.edu.ec/context/list?labels=true";
     public static String BASE_CONTEXT = "https://redi.cedia.edu.ec/context/";
     public static String AUTHORS_SA = BASE_CONTEXT + "authorsSameAs";
     public static String COAUTHORS_SA = BASE_CONTEXT + "coauthorsSameAs";
     public static String PUBLICATIONS_SA = BASE_CONTEXT + "publicationsSameAs";
     public static String AUTHORS_SA2 = BASE_CONTEXT + "authorsSameAs2";
     public static String[] REDI_PROVIDERS = {
-        BASE_CONTEXT + "provider/ScopusProvider",
         BASE_CONTEXT + "provider/ScieloProvider",
+        BASE_CONTEXT + "provider/GoogleScholarProvider",
+        BASE_CONTEXT + "provider/ScopusProvider",
+        BASE_CONTEXT + "provider/DBLPProvider",
         BASE_CONTEXT + "provider/AcademicsKnowledgeProvider",
         BASE_CONTEXT + "provider/SpringerProvider",
-        BASE_CONTEXT + "provider/GoogleScholarProvider",
-        BASE_CONTEXT + "authorsProvider",
-        BASE_CONTEXT + "provider/DBLPProvider"
+        BASE_CONTEXT + "provider/DOAJProvider",
+        BASE_CONTEXT + "authorsProvider"
+
     };
+
+    public void cloneREDI() throws Exception {
+        Set<String> contexts = getContexts();
+        importAllSafeMT(4, contexts);
+    }
+
+    public void ImportProviders() throws Exception {
+        Set<String> mySet = new HashSet<String>(Arrays.asList(REDI_PROVIDERS));
+        importAllSafeMT(4, mySet);
+    }
+
+    public Set<String> getContexts() throws Exception {
+        String html = getHTML(REDI_DOWNLOAD_CONTEXTS);
+        ArrayList<Map<String, Object>> name = (ArrayList<Map<String, Object>>) JsonUtils.fromString(html);
+        Set<String> uris = new LinkedHashSet<>();
+        for (Map<String, Object> a : name) {
+            uris.add(a.get("uri").toString());
+        }
+        return uris;
+    }
+
+    public String run(String... b) throws Exception {
+        ProcessBuilder pb = new ProcessBuilder(b);
+        pb.directory(new File(TMP));
+        Process p = pb.start();
+        InputStream in = p.getInputStream();
+        InputStream errorStream = p.getErrorStream();
+        String toString = IOUtils.toString(in) + IOUtils.toString(errorStream);
+        //System.out.println(toString);
+        return toString;
+    }
+
+    public void prepareCmd(String sc) throws Exception {
+        InputStream resourceAsStream = this.getClass().getResourceAsStream("/" + sc + ".sh");
+        Files.copy(resourceAsStream, Paths.get(TMP + sc + ".sh"), StandardCopyOption.REPLACE_EXISTING);
+        run("chmod", "+x", sc + ".sh");
+    }
+
+    public void prepare() throws Exception {
+        prepareCmd("upload");
+        prepareCmd("clean");
+    }
+
+    public void compressAndUpload(String a) throws Exception {
+        run("sh", "upload.sh", TMP + a);
+    }
+
+    public void clean(String a) throws Exception {
+        run("./clean.sh", a);
+    }
+
+    public void ImportGraphToFile(String graph, String name) throws MalformedURLException, IOException {
+        ImportToFile(REDI_DOWNLOAD + URLEncoder.encode(graph), name);
+    }
+
+    public void ImportToFile(String URL, String name) throws MalformedURLException, IOException {
+        FileUtils.copyURLToFile(new URL(URL), new File(TMP + name));
+    }
 
     public void removeDuplicatedSameAs(String O, String D) throws RepositoryException, MalformedQueryException, UpdateExecutionException {
         String OT = O + "__T";
@@ -242,8 +327,46 @@ public class graphdbRepository {
         }
     }
 
+    public void importAllSafe() throws UnsupportedEncodingException, Exception {
+        for (String gu : graphdbRepository.REDI_PROVIDERS) {
+            importGraphSafe(gu);
+        }
+    }
+
+    public void importAllSafeMT(int threads, Set<String> contexts) throws UnsupportedEncodingException, Exception {
+        BoundedExecutor threadPool = BoundedExecutor.getThreadPool(threads);
+
+        for (String gu : contexts) {
+            final String q = gu;
+            threadPool.submitTask(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        importGraphSafe(q);
+                    } catch (Exception ex) {
+                        Logger.getLogger(graphdbRepository.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+                }
+            });
+
+        }
+        threadPool.end();
+    }
+
     public void importGraph(String gra) throws UnsupportedEncodingException {
         importURL(REDI_DOWNLOAD + URLEncoder.encode(gra));
+    }
+
+    public void importGraphSafe(String gra) throws IOException, Exception {
+        String toString = UUID.randomUUID().toString();
+        System.out.println("DOWNLOAD " + gra);
+        ImportToFile(REDI_DOWNLOAD + URLEncoder.encode(gra), toString + ".trix");
+        System.out.println("CLEAN " + gra);
+        clean(toString + ".trix");
+        System.out.println("UPLOAD " + gra);
+        compressAndUpload(toString + ".trix");
+        System.out.println("IMPORT " + gra);
+        importURL("https://rediclon.cedia.edu.ec/fs/UploadDownloadFileServlet?fileName=" + toString + ".trix.gz");
     }
 
     public void importURL(String URL) throws UnsupportedEncodingException {
@@ -327,4 +450,18 @@ public class graphdbRepository {
         assert get == 200;
     }
 
+    public static String getHTML(String urlToRead) throws Exception {
+        StringBuilder result = new StringBuilder();
+        URL url = new URL(urlToRead);
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setRequestMethod("GET");
+        conn.setRequestProperty("Accept", "application/json, text/javascript, */*; q=0.01");
+        BufferedReader rd = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+        String line;
+        while ((line = rd.readLine()) != null) {
+            result.append(line);
+        }
+        rd.close();
+        return result.toString();
+    }
 }

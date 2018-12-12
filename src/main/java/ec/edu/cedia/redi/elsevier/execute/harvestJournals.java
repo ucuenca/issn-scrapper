@@ -43,6 +43,10 @@ public class harvestJournals {
             ValueFactoryImpl instance = ValueFactoryImpl.getInstance();
             int i = 0;
             for (String ai : issnSet) {
+                i++;
+//                if (i<3063){
+//                    continue;
+//                }
                 log.info("Processing : {} / {} ISSN: {}", i, issnSet.size(), ai);
                 Model journal = metrics.getJournal(ai);
                 Repository repo = new SailRepository(new MemoryStore());
@@ -53,9 +57,12 @@ public class harvestJournals {
                         + "	?a <prism:eIssn>|<prism:issn> ?c .\n"
                         + "}";
                 TupleQueryResult evaluate = connection.prepareTupleQuery(QueryLanguage.SPARQL, q).evaluate();
+                boolean save = true;
                 while (evaluate.hasNext()) {
                     BindingSet next = evaluate.next();
                     String stringValue = next.getValue("c").stringValue();
+                    boolean ask = redi.ask("ask { graph <" + Redi.ELSEVIER_CONTEXT + "> { ?a <prism:eIssn>|<prism:issn> '" + stringValue + "'^^xsd:string } } ");
+                    save = !ask;
                     Optional<String> image = metrics.getJournalImage(stringValue);
                     if (image.isPresent()) {
                         URI createURI = instance.createURI(image.get());
@@ -65,8 +72,9 @@ public class harvestJournals {
                 }
                 connection.close();
                 repo.shutDown();
-                redi.addModel(Redi.ELSEVIER_CONTEXT, journal);
-                i++;
+                if (save) {
+                    redi.addModel(Redi.ELSEVIER_CONTEXT, journal);
+                }
             }
         }
     }
