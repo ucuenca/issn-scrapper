@@ -513,6 +513,34 @@ public class Redi {
         return t;
     }
 
+    public void removeEmptyCollections() throws RepositoryException, MalformedQueryException, UpdateExecutionException {
+        String q = "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n"
+                + "PREFIX dct: <http://purl.org/dc/terms/>\n"
+                + "delete {\n"
+                + "	graph <" + PUB_CONTEXT + "> {\n"
+                + "             ?c ?p ?v .\n"
+                + "      	?s ?h ?c .\n"
+                + "    }\n"
+                + "} where {\n"
+                + "	{\n"
+                + "      select ?c {\n"
+                + "          graph <" + PUB_CONTEXT + "> {\n"
+                + "              [] dct:isPartOf ?c .\n"
+                + "              optional {\n"
+                + "                  ?c rdfs:label ?l .\n"
+                + "                  bind ( strlen(?l) as ?len).\n"
+                + "              }\n"
+                + "          }\n"
+                + "      } group by ?c having (max(?len) < 2)\n"
+                + "    } .\n"
+                + "  	graph <" + PUB_CONTEXT + "> {\n"
+                + "             ?c ?p ?v .\n"
+                + "      	?s ?h ?c .\n"
+                + "    }\n"
+                + "}";
+        update(q);
+    }
+
     public void updateOtherIndexes() throws RepositoryException, MalformedQueryException, UpdateExecutionException {
         String q = "PREFIX dct: <http://purl.org/dc/terms/>\n"
                 + "PREFIX foaf: <http://xmlns.com/foaf/0.1/>\n"
@@ -809,9 +837,9 @@ public class Redi {
                 + "		?l <http://purl.org/dc/elements/1.1/@href> ?i .\n"
                 + "	}\n"
                 + "} ";
-        //update(q);
-        //update(q1);
-        //update(q2);
+        update(q);
+        update(q1);
+        update(q2);
     }
 
     public void update(String q) throws RepositoryException, MalformedQueryException, UpdateExecutionException {
