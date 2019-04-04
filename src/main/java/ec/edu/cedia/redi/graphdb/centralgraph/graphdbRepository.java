@@ -68,6 +68,7 @@ public class graphdbRepository {
         BASE_CONTEXT + "provider/AcademicsKnowledgeProvider",
         BASE_CONTEXT + "provider/SpringerProvider",
         BASE_CONTEXT + "provider/DOAJProvider",
+        BASE_CONTEXT + "provider/ORCIDProvider",
         BASE_CONTEXT + "authorsProvider"
 
     };
@@ -231,31 +232,32 @@ public class graphdbRepository {
     public void harvestSameAs(String S, String D, int level) throws RepositoryException, MalformedQueryException, UpdateExecutionException {
         String providers = "";
         for (String p : REDI_PROVIDERS) {
-            providers += " <" + p + "> ";
-        }
-        String qp = "";
-        String last = "";
-        for (int i = 0; i < level; i++) {
-            String j = i == 0 ? "" : "" + (i - 1);
-            last = "    ?c" + j + " ?p" + i + " ?c" + i + " .\n";
-            qp += last;
-        }
+            providers = " <" + p + "> ";
 
-        String q = "insert {\n"
-                + "  graph <" + D + "> {\n"
-                + last
-                + "  }\n"
-                + "}\n"
-                + "where {\n"
-                + "  graph <" + S + "> {\n"
-                + "    ?a <http://www.w3.org/2002/07/owl#sameAs> ?c .\n"
-                + "  }\n"
-                + "  values ?g { " + providers + " } .\n"
-                + "  graph ?g {\n"
-                + qp
-                + "  }\n"
-                + "}";
-        runUpdate(q);
+            String qp = "";
+            String last = "";
+            for (int i = 0; i < level; i++) {
+                String j = i == 0 ? "" : "" + (i - 1);
+                last = "    ?c" + j + " ?p" + i + " ?c" + i + " .\n";
+                qp += last;
+            }
+
+            String q = "insert {\n"
+                    + "  graph <" + D + "> {\n"
+                    + last
+                    + "  }\n"
+                    + "}\n"
+                    + "where {\n"
+                    + "  graph <" + S + "> {\n"
+                    + "    ?a <http://www.w3.org/2002/07/owl#sameAs> ?c .\n"
+                    + "  }\n"
+                    + "  values ?g { " + providers + " } .\n"
+                    + "  graph ?g {\n"
+                    + qp
+                    + "  }\n"
+                    + "}";
+            runUpdate(q);
+        }
     }
 
     public void replaceSameAsObjectExcept(String O, String D, String S, String... E) throws RepositoryException, MalformedQueryException, UpdateExecutionException {
@@ -379,9 +381,8 @@ public class graphdbRepository {
         runPost(params);
     }
 
-    public void deleteGraph(String uri) {
-        NameValuePair[] params = {new NameValuePair("update", "CLEAR GRAPH <" + uri + ">")};
-        runPost(params);
+    public void deleteGraph(String uri) throws RepositoryException, MalformedQueryException, UpdateExecutionException {
+        runUpdateRepository("CLEAR GRAPH <" + uri + ">");
     }
 
     public void copyGraph(String org, String des) throws RepositoryException, MalformedQueryException, UpdateExecutionException {
@@ -417,15 +418,13 @@ public class graphdbRepository {
 
     public void runUpdate(String query) throws RepositoryException, MalformedQueryException, UpdateExecutionException {
         runUpdateRepository(query);
-//        NameValuePair[] params = {
-//            new NameValuePair("infer", "true"),
-//            new NameValuePair("sameAs", "true"),
-//            new NameValuePair("update", query)
-//        };
-//        runPost(params);
     }
 
     public void runUpdateRepository(String query) throws RepositoryException, MalformedQueryException, UpdateExecutionException {
+        System.out.println("update="+URLEncoder.encode(query)+"&infer=true&sameAs=true");
+        if (true) {
+            return;
+        }
         SPARQLRepository sp = new SPARQLRepository("http://201.159.222.25:8180/repositories/data", GRAPHDB_INSTANCE);
         sp.initialize();
         RepositoryConnection connection = sp.getConnection();

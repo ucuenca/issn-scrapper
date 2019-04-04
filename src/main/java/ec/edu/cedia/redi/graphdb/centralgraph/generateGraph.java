@@ -32,26 +32,26 @@ public class generateGraph {
         //g.ImportGraphToFile(graphdbRepository.BASE_CONTEXT+"provider/GoogleScholarProvider", "sci.trix");
         //g.clean("sci.trix");
         //---OK
-//        g.replaceSameAsSubject(graphdbRepository.AUTHORS_SA, graphdbRepository.AUTHORS_SA + "F", graphdbRepository.AUTHORS_SA2);
-//        g.removeDuplicatedSameAs(graphdbRepository.COAUTHORS_SA, graphdbRepository.COAUTHORS_SA + "F");
-//        g.removeDuplicatedSameAs(graphdbRepository.PUBLICATIONS_SA, graphdbRepository.PUBLICATIONS_SA + "F");
-//        g.harvestRawData(graphdbRepository.AUTHORS_SA + "F", graphdbRepository.BASE_CONTEXT + "rediRaw", 3);
+        g.replaceSameAsSubject(graphdbRepository.AUTHORS_SA, graphdbRepository.AUTHORS_SA + "F", graphdbRepository.AUTHORS_SA2);
+        g.removeDuplicatedSameAs(graphdbRepository.COAUTHORS_SA, graphdbRepository.COAUTHORS_SA + "F");
+        g.removeDuplicatedSameAs(graphdbRepository.PUBLICATIONS_SA, graphdbRepository.PUBLICATIONS_SA + "F");
+        g.harvestRawData(graphdbRepository.AUTHORS_SA + "F", graphdbRepository.BASE_CONTEXT + "rediRaw", 3);
 
-//        g.copyGraph(graphdbRepository.AUTHORS_SA + "F", graphdbRepository.BASE_CONTEXT + "sax");
-//        g.copyGraph(graphdbRepository.COAUTHORS_SA + "F", graphdbRepository.BASE_CONTEXT + "sax");
-//        g.removeDuplicatedPrior(graphdbRepository.AUTHORS_SA + "F", graphdbRepository.COAUTHORS_SA + "F",
-//                graphdbRepository.BASE_CONTEXT + "sax", graphdbRepository.BASE_CONTEXT + "sa");
-//        g.copyGraph(graphdbRepository.PUBLICATIONS_SA + "F", graphdbRepository.BASE_CONTEXT + "sa");
+        g.copyGraph(graphdbRepository.AUTHORS_SA + "F", graphdbRepository.BASE_CONTEXT + "sax");
+        g.copyGraph(graphdbRepository.COAUTHORS_SA + "F", graphdbRepository.BASE_CONTEXT + "sax");
+        g.removeDuplicatedPrior(graphdbRepository.AUTHORS_SA + "F", graphdbRepository.COAUTHORS_SA + "F",
+                graphdbRepository.BASE_CONTEXT + "sax", graphdbRepository.BASE_CONTEXT + "sa");
+        g.copyGraph(graphdbRepository.PUBLICATIONS_SA + "F", graphdbRepository.BASE_CONTEXT + "sa");
 
 
-//        g.replaceSameAsSubject(graphdbRepository.BASE_CONTEXT + "rediRaw",
-//                graphdbRepository.BASE_CONTEXT + "rediRawS", graphdbRepository.BASE_CONTEXT + "sa");
-//        g.replaceSameAsObjectExcept(graphdbRepository.BASE_CONTEXT + "rediRawS",
-//                graphdbRepository.BASE_CONTEXT + "redi", graphdbRepository.BASE_CONTEXT + "sa",
-//                "http://xmlns.com/foaf/0.1/holdsAccount");
-        g.copyGraph(graphdbRepository.BASE_CONTEXT + "sa", graphdbRepository.BASE_CONTEXT + "redi");
-//        g.deleteGraph(graphdbRepository.BASE_CONTEXT + "rediRaw");
-//        g.deleteGraph(graphdbRepository.BASE_CONTEXT + "rediRawS");
+        g.replaceSameAsSubject(graphdbRepository.BASE_CONTEXT + "rediRaw",
+                graphdbRepository.BASE_CONTEXT + "rediRawS", graphdbRepository.BASE_CONTEXT + "sa");
+        g.replaceSameAsObjectExcept(graphdbRepository.BASE_CONTEXT + "rediRawS",
+                graphdbRepository.BASE_CONTEXT + "redix", graphdbRepository.BASE_CONTEXT + "sa",
+                "http://xmlns.com/foaf/0.1/holdsAccount");
+        g.copyGraph(graphdbRepository.BASE_CONTEXT + "sa", graphdbRepository.BASE_CONTEXT + "redix");
+        g.deleteGraph(graphdbRepository.BASE_CONTEXT + "rediRaw");
+        g.deleteGraph(graphdbRepository.BASE_CONTEXT + "rediRawS");
     }
 
 }
