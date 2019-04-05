@@ -59,7 +59,7 @@ public class Redi {
     private final ValueFactory vf = ValueFactoryImpl.getInstance();
     private static final Logger log = LoggerFactory.getLogger(Redi.class);
     public static final String BASE_CONTEXT = "https://redi.cedia.edu.ec/context/";
-    public static final String PUB_CONTEXT = BASE_CONTEXT + "redi";
+    public static final String PUB_CONTEXT = BASE_CONTEXT + "redix";
     public static final String LATINDEX_CONTEXT = BASE_CONTEXT + "latindex";
     public static final String POTENTIAL_ISSN_CONTEXT = BASE_CONTEXT + "latindexPotentialIssn";
     public static final String AUGMENT_ISSN_INFO_CONTEXT = BASE_CONTEXT + "latindexAugmentInfo";
@@ -704,7 +704,7 @@ public class Redi {
         Set<String> hs = new HashSet<>();
         for (Map<String, Value> mp : query) {
             String issn = mp.get("p").stringValue();
-            issn = issn.replaceAll("-", "").toLowerCase().trim();
+            issn = issn.replaceAll("-", "").replaceAll("–", "").toLowerCase().trim();
             while (issn.length() < 8) {
                 issn = "0" + issn;
             }
@@ -783,7 +783,7 @@ public class Redi {
                 + "      values ?p {<prism:eIssn> <prism:issn> <prism:isbn>} ."
                 + "      ?a ?p ?i .\n"
                 + "      ?a <prism:url> ?u .\n"
-                + "      filter (lcase(str(?i)) ='" + issnOrIsbn + "') .\n"
+                + "      filter (lcase(str(?i)) ='" + issnOrIsbn.replaceAll("\n", "") + "') .\n"
                 + "    }\n"
                 + "}";
         List<Map<String, Value>> query = query(q);

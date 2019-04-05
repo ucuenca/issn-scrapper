@@ -44,9 +44,9 @@ public class harvestJournals {
             int i = 0;
             for (String ai : issnSet) {
                 i++;
-//                if (i<3063){
-//                    continue;
-//                }
+                if (i<1558){
+                    continue;
+                }
                 log.info("Processing : {} / {} ISSN: {}", i, issnSet.size(), ai);
                 Model journal = metrics.getJournal(ai);
                 Repository repo = new SailRepository(new MemoryStore());

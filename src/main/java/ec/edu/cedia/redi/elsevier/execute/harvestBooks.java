@@ -43,6 +43,10 @@ public class harvestBooks {
             ValueFactoryImpl instance = ValueFactoryImpl.getInstance();
             int i = 0;
             for (String ai : isbnSet) {
+                i++;
+                //if (i < 515) {
+                //    continue;
+                //}
                 log.info("Processing : {} / {} ISBN: {}", i, isbnSet.size(), ai);
                 Model book = metrics.getBook(ai);
                 Repository repo = new SailRepository(new MemoryStore());
@@ -66,7 +70,6 @@ public class harvestBooks {
                 connection.close();
                 repo.shutDown();
                 redi.addModel(Redi.ELSEVIER_CONTEXT, book);
-                i++;
             }
         }
     }

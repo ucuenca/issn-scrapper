@@ -89,10 +89,11 @@ public class JournalMetrics {
             case 404:
                 return new LinkedHashModel();
             default:
-                throw new HttpException(String.format("Cannot extract "
+                System.out.print(String.format("Cannot extract "
                         + "journal information for url \n%s. "
                         + "\nStatus code: %s "
                         + "\nISSN:%s", get.getPath(), status, issn));
+                return new LinkedHashModel();
         }
     }
 
@@ -105,7 +106,7 @@ public class JournalMetrics {
      * @return
      */
     public Model getBook(String isbn) throws HttpException {
-        HttpMethod get = new GetMethod(String.format(ISBN, isbn));
+        HttpMethod get = new GetMethod(String.format(ISBN, URLEncoder.encode(isbn)));
         get.setRequestHeader("X-ELS-APIKey", API_KEY);
 
         int status = HTTPCaller.get(get);
@@ -121,10 +122,11 @@ public class JournalMetrics {
             case 404:
                 return new LinkedHashModel();
             default:
-                throw new HttpException(String.format("Cannot extract "
+                System.out.print(String.format("Cannot extract "
                         + "book information for url \n%s. "
                         + "\nStatus code: %s "
                         + "\nISSN:%s", get.getPath(), status, isbn));
+                return new LinkedHashModel();
         }
     }
 

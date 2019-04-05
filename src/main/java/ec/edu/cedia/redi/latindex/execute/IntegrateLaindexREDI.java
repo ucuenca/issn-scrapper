@@ -22,9 +22,9 @@ public class IntegrateLaindexREDI {
         try (RediRepository r = RediRepository.getInstance()) {
             Redi redi = new Redi(r);
             redi.removeEmptyCollections();
-            //redi.updateOtherIndexes();
-            redi.updateLatindex();
-            redi.updateLatindexImg();
+            redi.updateOtherIndexes();
+            //redi.updateLatindex();
+            //redi.updateLatindexImg();
         }
     }
 

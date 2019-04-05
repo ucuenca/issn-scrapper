@@ -29,23 +29,26 @@ public class linkJournalsAndBooks {
     public static void main(String[] args) throws RepositoryException, Exception {
         try (RediRepository r = RediRepository.getInstance()) {
             Redi redi = new Redi(r);
-            List<Map.Entry<String, String>> issnPubSet = redi.getISSNPubSet();
+            //List<Map.Entry<String, String>> issnPubSet = redi.getISSNPubSet();
             int ix = 0;
-            for (Map.Entry<String, String> en : issnPubSet) {
-                log.info("Processing : {} / {} ISSN: {}", ix, issnPubSet.size(), en.getKey());
-                Set<String> issnElsevier = redi.getISSNorISBNElsevier(en.getValue());
-                for (String i : issnElsevier) {
-                    redi.addSt(en.getKey(), "http://www.w3.org/2000/01/rdf-schema#seeAlso", i, Redi.ELSEVIER_CONTEXT + "SameAs");
-                }
-                ix++;
-            }
+//            for (Map.Entry<String, String> en : issnPubSet) {
+//                log.info("Processing : {} / {} ISSN: {}", ix, issnPubSet.size(), en.getKey());
+//                Set<String> issnElsevier = redi.getISSNorISBNElsevier(en.getValue());
+//                for (String i : issnElsevier) {
+//                    redi.addSt(en.getKey(), "http://www.w3.org/2000/01/rdf-schema#seeAlso", i, Redi.ELSEVIER_CONTEXT + "SameAs");
+//                }
+//                ix++;
+//            }
             List<Map.Entry<String, String>> isbnPubSet = redi.getISBNPubSet();
             ix = 0;
             for (Map.Entry<String, String> en : isbnPubSet) {
-                log.info("Processing : {} / {} ISBN: {}", ix, isbnPubSet.size(), en.getKey());
-                Set<String> isbnElsevier = redi.getISSNorISBNElsevier(en.getValue());
-                for (String i : isbnElsevier) {
-                    redi.addSt(en.getKey(), "http://www.w3.org/2000/01/rdf-schema#seeAlso", i, Redi.ELSEVIER_CONTEXT + "SameAs");
+                if (ix < 2114) {
+                } else {
+                    log.info("Processing : {} / {} ISBN: {}", ix, isbnPubSet.size(), en.getKey());
+                    Set<String> isbnElsevier = redi.getISSNorISBNElsevier(en.getValue());
+                    for (String i : isbnElsevier) {
+                        redi.addSt(en.getKey(), "http://www.w3.org/2000/01/rdf-schema#seeAlso", i, Redi.ELSEVIER_CONTEXT + "SameAs");
+                    }
                 }
                 ix++;
             }
